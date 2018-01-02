@@ -1,18 +1,28 @@
-matrix:
-  include: 
-    - os: linux
-      dist: trusty
-      compiler: g++
-    - os: linux
-      compiler: clang++
-    - os: osx
-      compiler: clang++  
+os:
+- linux
+- osx
 
-language: cpp
+dist: trusty
+
+language: node_js
+
+node_js:
+- "4"
+- "5"
+- "6"
+- "7"
+- "8"
 
 script:
-- make
-- ./xdhq --version
+# Below commented commands are automatically done.
+#- npm install node-pre-gyp
+#- node-pre-gyp configure
+#- node-pre-gyp build
+- npm install njsq
+- npm explore njsq -- node test.js
+- node-pre-gyp configure
+- node-pre-gyp build
+- node test.js
 
 # To disable building on tags. Tags are supposed to begin with 'v' and only containing digits.
 branches:

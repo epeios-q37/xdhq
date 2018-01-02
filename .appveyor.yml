@@ -1,40 +1,64 @@
 environment:
   version: 20171228
   affix: xdhq
+  matrix:
+    - nodejs_version: "4"
+    - nodejs_version: "5"
+    - nodejs_version: "6"
+    - nodejs_version: "7"
+    - nodejs_version: "8"
+    - nodejs_version: "9"
+
+skip_tags: true	
 
 platform:
 - x86
 - x64
 
-configuration: Release
+# configuration: Release
 
 os :
+# - Visual Studio 2013
+# - Visual Studio 2015
 - Visual Studio 2017
-- Visual Studio 2015
-- Visual Studio 2013
+
+install:
+- ps: Install-Product node $env:nodejs_version $env:platform
+- npm install -g node-gyp
+- npm install -g node-pre-gyp	# to allow use as command in a console (for the build).
+- npm install node-pre-gyp		# to allow use as module in a JS file (for the test).
+- npm install njsq
+
+before_build:
+- node-pre-gyp configure
+
+build_script:
+- node-pre-gyp /m build
+
+after_build:
+- node -e "console.log( process.versions.modules + ' - ' + require('./package.json').version)"
+- if "%platform%"=="x86" set platform=ia32
+- echo | set /p="%affix%njs-v%version%" >>tmpfile.tmp || true
+- echo | set /p="-win32-" >>tmpfile.tmp || true
+- echo | set /p="%platform%" >>tmpfile.tmp || true
+- set /p addon= <tmpfile.tmp
+- echo .%addon%.
+- set dir=win32-%platform%
+- mkdir %dir%
+- copy %affix%njs.dll %dir%
+# It MUST be '.tar.gz' to be retrieved by 'node-pre-gyp' when installed with 'npm' !
+- 7z a -ttar -so dummy %dir% | 7z a -si %addon%.tar.gz
 
 test_script:
-- xdhq --version
-
-# matrix:
-  # allow_failures:
-  # - os: Visual Studio 2017
-  
-skip_tags: true  
-  
-after_build:
-- echo | set /p="%affix%-v%version%" >>tmpfile.tmp || true
-- echo | set /p="-win-" >>tmpfile.tmp || true
-- echo | set /p="%platform%" >>tmpfile.tmp || true
-- set /p target= <tmpfile.tmp
-- echo .%target%.
-- set dir=%target%
-- mkdir %dir%
-- copy %affix%.exe %dir%
-- 7z a %target%.zip %dir%
+- node --version
+- npm --version
+# - npm explore njsq -- node test.js
+# Above line does not work properly under node 4 & 5, so below command is used instead.
+- node -e "process.stdout.write( \"***** 'NJSq' TEST BEGIN *****\n\" )" && node node_modules/njsq/test.js && node -e "process.stdout.write( \"***** 'NJSq' TEST END *****\n\" )"
+- node -e "process.stdout.write( \"********** 'XDHq' TEST BEGIN **********\n\" )" && node test.js && node -e "process.stdout.write( \"\n********** 'XDHq' TEST END **********\n\" )"
 
 artifacts:
-- path: '*.zip'
+- path: '*.tar.gz'
 
 deploy:
   tag: v$(version)
@@ -45,6 +69,9 @@ deploy:
   draft: false
   prerelease: false
   on:
-   APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+   nodejs_version: "8"
 
+# matrix:
+  # allow_failures:
+  # - os: Visual Studio 2017
 
