@@ -1,0 +1,41 @@
+{
+  "name": "xdhq",
+  "version": "2017.12.28",
+  "author": "Claude SIMON (http://q37.info/contact/)",
+  "description": "XDHTML proxy",
+  "main": "XDHq.js",
+  "engines": {
+    "node": ">=4"
+  },
+  "binary": {
+    "module_name": "xdhqxdh",
+    "module_path": "./",
+    "remote_path": "./epeios-q37/xdhq/releases/download/v20171228/",
+    "package_name": "{module_name}-v20171228-{platform}-{arch}.tar.gz",
+    "host": "https://github.com"
+  },
+  "dependencies": {
+   "xdhwebq": "2017.12.28"
+  },
+  "devDependencies": {
+
+  },
+  "scripts": {
+    "preinstall": "npm install node-pre-gyp",
+    "install": "node-pre-gyp install --fallback-to-build",
+    "test": "node test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/epeios-q37/xdhq.git"
+  },
+  "keywords": [
+    "addon","native","C++","njsq","UnJS","XDHTML","proxy","q37","epeios"
+  ],
+  "license": "AGPL-3.0",
+  "bugs": {
+    "url": "https://github.com/epeios-q37/xdhq/issues"
+  },
+  "homepage": "https://github.com/epeios-q37/xdhq#readme",
+  "runkitExampleFilename": "runkit.js"
+}
