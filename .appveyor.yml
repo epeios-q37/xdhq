@@ -70,8 +70,7 @@ deploy:
   prerelease: false
   on:
    nodejs_version: "8"
-
-# matrix:
-  # allow_failures:
-  # - os: Visual Studio 2017
-
+
+matrix:
+  allow_failures:
+    - nodejs_version: "5"
