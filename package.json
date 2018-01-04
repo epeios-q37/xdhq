@@ -1,8 +1,8 @@
 {
-  "name": "xdhq",
+  "name": "xdhqxdh",
   "version": "2018.1.2",
   "author": "Claude SIMON (http://q37.info/contact/)",
-  "description": "XDHTML proxy",
+  "description": "'XDHTML' proxy",
   "main": "XDHq.js",
   "engines": {
     "node": ">=4"
@@ -30,7 +30,7 @@
     "url": "git+https://github.com/epeios-q37/xdhq.git"
   },
   "keywords": [
-    "addon","native","C++","njsq","UnJS","XDHTML","proxy","q37","epeios"
+    "addon","native","C++","njsq","XDHTML","proxy","q37","epeios"
   ],
   "license": "AGPL-3.0",
   "bugs": {
