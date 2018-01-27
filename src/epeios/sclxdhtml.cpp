@@ -23,23 +23,18 @@
 
 using namespace sclxdhtml;
 
-namespace registry_ {
+namespace {
 	using rgstry::rEntry;
 
-	namespace definition_ {
+	namespace {
 		namespace {
-			namespace {
-				rEntry XSLFilesSet_( "XSLFilesSet", sclrgstry::Definitions );
-			}
-
-			rEntry FreeXSLFiles_( "XSLFiles", XSLFilesSet_ );
+			rEntry XSLFiles_( "XSLFiles", sclrgstry::Definitions );
 		}
-		rEntry TaggedXSLFiles( RGSTRY_TAGGING_ATTRIBUTE( "target" ), FreeXSLFiles_ );
+		rEntry UntaggedXSLFile_( "XSLFile", XSLFiles_ );
 	}
 }
 
-rgstry::rEntry registry::definition::XSLLayoutFile( "Layout", registry_::definition_::TaggedXSLFiles );
-rgstry::rEntry registry::definition::XSLCastingFile( "Casting", registry_::definition_::TaggedXSLFiles );
+rgstry::rEntry registry::definition::XSLFile( RGSTRY_TAGGING_ATTRIBUTE( "target" ), UntaggedXSLFile_ );
 
 namespace {
 	E_CDEF(char *, StraightBackendType_, "Straight" );
@@ -229,11 +224,10 @@ namespace {
 	}
 }
 
-void sclxdhtml::Alert(
+void sclxdhtml::sProxy::Alert(
 	const ntvstr::string___ &XML,
 	const ntvstr::string___ &XSL,
 	const ntvstr::string___ &Title,
-	sProxy &Proxy,
 	const char *Language )
 {
 qRH
@@ -242,7 +236,7 @@ qRB
 	CloseText.Init();
 	scllocale::GetTranslation( SCLXDHTML_NAME "_CloseText", Language, CloseText );
 
-	Proxy.Alert( XML, XSL, Title, CloseText );
+	Core_.Alert( XML, XSL, Title, CloseText );
 qRR
 qRT
 qRE
@@ -263,34 +257,31 @@ namespace{
 
 		SetXMLAndXSL_( Message, MessageLanguage, XML, XSL );
 
-		Alert(XML, XSL, ntvstr::string___(), Proxy, CloseTextLanguage );
+		Proxy.Alert(XML, XSL, ntvstr::string___(), CloseTextLanguage );
 	qRR
 	qRT
 	qRE
 	}
 }
 
-void sclxdhtml::Alert(
+void sclxdhtml::sProxy::AlertT(
 	const ntvstr::string___ &RawMessage,
-	const char *Language,
-	sProxy &Proxy )
-{
-	Alert_( RawMessage, Language, Proxy, Language );
-}
-
-void sclxdhtml::Alert(
-	const ntvstr::string___ &Message,
-	sProxy &Proxy,
 	const char *Language )
 {
-	Alert_( Message, NULL, Proxy, Language );
+	Alert_( RawMessage, Language, *this, Language );
 }
 
-bso::bool__ sclxdhtml::Confirm(
+void sclxdhtml::sProxy::AlertU(
+	const ntvstr::string___ &Message,
+	const char *Language )
+{
+	Alert_( Message, NULL, *this, Language );
+}
+
+bso::bool__ sclxdhtml::sProxy::Confirm(
 	const ntvstr::string___ &XML,
 	const ntvstr::string___ &XSL,
 	const ntvstr::string___ &Title,
-	sProxy &Proxy,
 	const char *Language )
 {
 	bso::bool__ Confirmation = false;
@@ -300,7 +291,7 @@ qRB
 	CloseText.Init();
 	scllocale::GetTranslation( SCLXDHTML_NAME "_CloseText", Language, CloseText );
 
-	Confirmation = Proxy.Confirm( XML, XSL, Title, CloseText );
+	Confirmation = Core_.Confirm( XML, XSL, Title, CloseText );
 qRR
 qRT
 qRE
@@ -323,7 +314,7 @@ namespace {
 
 		SetXMLAndXSL_( Message, MessageLanguage, XML, XSL );
 
-		Confirmation = Confirm( XML, XSL, ntvstr::string___(), Proxy, CloseTextLanguage );
+		Confirmation = Proxy.Confirm( XML, XSL, ntvstr::string___(), CloseTextLanguage );
 	qRR
 	qRT
 	qRE
@@ -331,20 +322,18 @@ namespace {
 	}
 }
 
-bso::bool__ sclxdhtml::Confirm(
+bso::bool__ sclxdhtml::sProxy::ConfirmT(
 	const ntvstr::string___ &RawMessage,
-	const char *Language,
-	sProxy &Proxy )
-{
-	return Confirm_( RawMessage,  Language, Proxy, Language );
-}
-
-bso::bool__ sclxdhtml::Confirm(
-	const ntvstr::string___ &Message,
-	sProxy &Proxy,
 	const char *Language )
 {
-	return Confirm_( Message,  NULL, Proxy, Language );
+	return Confirm_( RawMessage,  Language, *this, Language );
+}
+
+bso::bool__ sclxdhtml::sProxy::ConfirmU(
+	const ntvstr::string___ &Message,
+	const char *Language )
+{
+	return Confirm_( Message,  NULL, *this, Language );
 }
 
 void sclxdhtml::HandleError(
@@ -360,15 +349,15 @@ qRB
 		Message.Init();
 		if ( sclerror::GetPendingErrorTranslation( Language, Message, err::hUserDefined ) ) {
 			sclerror::ResetPendingError();
-			Alert( Message, Proxy, Language );
+			Proxy.AlertU( Message, Language );
 		} 
 		break;
 	case err::t_Free:
 	case err::t_Return:
-		Alert( "???", Proxy, Language );
+		Proxy.AlertU( "???", Language );
 		break;
 	default:
-		Alert( err::Message( ErrBuffer ), Proxy, Language );
+		Proxy.AlertU( err::Message( ErrBuffer ), Language );
 		break;
 	}
 
@@ -378,14 +367,12 @@ qRT
 qRE
 }
 
-void sclxdhtml::SetElement_(
+void sclxdhtml::sProxy::SetLayout_(
 	const xdhdws::nstring___ &Id,
-	fSet Set,
 	const rgstry::rEntry & Filename,
 	const char *Target,
 	const sclrgstry::registry_ &Registry,
 	const str::dString &XML,
-	xdhdws::sProxy &Proxy,
 	bso::char__ Marker )
 {
 qRH
@@ -394,16 +381,15 @@ qRB
 	XSL.Init();
 	sclxdhtml::LoadXSLAndTranslateTags( rgstry::tentry___( Filename, Target ), Registry, XSL, Marker );
 
-	Set( Proxy, Id, XML, XSL );
+	Core_.SetLayout( Id, XML, XSL );
 qRR
 qRT
 qRE
 }
 
-void sclxdhtml::SetContents_(
+void sclxdhtml::sProxy::SetContents(
 	const str::dStrings &Ids,
-	const str::dStrings &Contents,
-	xdhdws::sProxy & Proxy )
+	const str::dStrings &Contents )
 {
 qRH;
 	str::wString MergedIds, MergedContents;
@@ -417,16 +403,15 @@ qRB;
 	MergedContents.Init();
 	xdhcmn::FlatMerge( Contents, MergedContents, true );	// Used as is in an JS script, hence last argument at 'true'.
 
-	SetContents_( Proxy, MergedIds, MergedContents );
+	Core_.SetContents(  MergedIds, MergedContents );
 qRR;
 qRT;
 qRE;
 }
 
-void sclxdhtml::SetContent_(
+void sclxdhtml::sProxy::SetContent(
 	const str::dString &Id,
-	const str::dString &Content,
-	xdhdws::sProxy &Proxy )
+	const str::dString &Content )
 {
 qRH;
 	str::wStrings Ids, Contents;
@@ -436,124 +421,176 @@ qRB;
 	Ids.Append( Id );
 	Contents.Append( Content );
 
-	SetContents_( Ids, Contents, Proxy );
+	SetContents( Ids, Contents );
 qRR;
 qRT;
 qRE;
 }
 
-void sclxdhtml::SetCastsByIds_(
-	const str::dStrings &Ids,
-	const str::dStrings &Values, 
-	xdhdws::sProxy &Proxy )
+void sclxdhtml::sProxy::InsertCSSRule(
+	const str::dString &Rule,
+	xdhcmn::sIndex Index )
 {
-qRH;
-	str::wString MergedIds, MergedValues;
-qRB;
-	MergedIds.Init();
-	xdhcmn::FlatMerge( Ids, MergedIds, true );
-
-	MergedValues.Init();
-	xdhcmn::FlatMerge( Values, MergedValues, true );
-
-	Proxy.SetCastsByIds( MergedIds, MergedValues );
-qRR;
-qRT;
-qRE;
+	return Core_.InsertCSSRule( Rule, Index );
 }
 
-void sclxdhtml::SetCastsByTags_(
-	const xdhdws::nstring___ &Id,
-	const dCasts &Casts,
-	xdhdws::sProxy &Proxy )
+xdhcmn::sIndex sclxdhtml::sProxy::AppendCSSRule( const str::dString &Rule )
 {
-qRH;
-	str::wStrings Tags, Values;
-	sdr::sRow Row = qNIL;
-	str::wString MergedTags, MergedValues;
-qRB;
-	tol::Init( Tags, Values );
+	return Core_.AppendCSSRule( Rule );
+}
 
-	Row = Casts.First();
+void sclxdhtml::sProxy::RemoveCSSRule( xdhcmn::sIndex Index )
+{
+	Core_.RemoveCSSRule( Index );
+}
 
-	while ( Row != qNIL ) {
-		Tags.Append( Casts( Row ).Tag );
-		Values.Append( Casts( Row ).Value );
+namespace {
+	void HandleClasses_(
+		const str::dStrings &Ids,
+		const str::dStrings &Classes,
+		void (xdhdws::sProxy::* Method)(
+			const xdhcmn::rNString &Ids,
+			const xdhcmn::rNString &Classes ),
+		xdhdws::sProxy &Proxy )
+	{
+	qRH;
+		str::wString MergedIds, MergedClasses;
+	qRB;
+		MergedIds.Init();
+		xdhcmn::FlatMerge( Ids, MergedIds, true );	// Passed as is to a JS script, hence 'true'.
 
-		Row = Casts.Next( Row );
+		MergedClasses.Init();
+		xdhcmn::FlatMerge( Classes, MergedClasses, true );	// Passed as is to a JS script, hence 'true'.
+
+		(Proxy.*Method)( MergedIds, MergedClasses );
+	qRR;
+	qRT;
+	qRE;
 	}
 
-	MergedTags.Init();
-	xdhcmn::FlatMerge( Tags, MergedTags, false );
+	void HandleClass_(
+		const str::dString &Id,
+		const str::dString &Class,
+		void (sProxy::*Method)(
+			const str::dStrings &Ids,
+			const str::dStrings &Classes ),
+		sProxy &Proxy )
+	{
+	qRH;
+		str::wStrings Ids, Classes;
+	qRB;
+		Ids.Init();
+		Ids.Append( Id );
 
-	MergedValues.Init();
-	xdhcmn::FlatMerge( Values, MergedValues, false );
+		Classes.Init();
+		Classes.Append( Class );
 
-	Proxy.SetCastsByTags( Id, MergedTags, MergedValues );
-qRR;
-qRT;
-qRE;
+		(Proxy.*Method)( Ids, Classes );
+	qRR;
+	qRT;
+	qRE;
+	}
 }
 
-void sclxdhtml::SetCastById_(
-	const xdhdws::nstring___ &RawId,
-	const xdhdws::nstring___ &RawValue,
-	xdhdws::sProxy &Proxy )
+void sclxdhtml::sProxy::AddClasses(
+	const str::dStrings &Ids,
+	const str::dStrings& Classes )
 {
-qRH;
-	str::wString Id, Value;
-	str::wStrings Ids, Values;
-qRB;
-	Id.Init();
-	RawId.UTF8( Id );
-	Ids.Init();
-	Ids.Append( Id );
-
-	Value.Init();
-	RawValue.UTF8( Value );
-	Values.Init();
-	Values.Append( Value );
-
-	SetCastsByIds_( Ids, Values, Proxy );
-qRR;
-qRT;
-qRE;
+	HandleClasses_( Ids, Classes, &xdhdws::sProxy::AddClasses, Core_ );
 }
 
-void sclxdhtml::SetCastByTag_(
-	const xdhdws::nstring___ &Id,
-	const dCast &Cast,
-	xdhdws::sProxy &Proxy )
+void sclxdhtml::sProxy::AddClass(
+	const str::dString &Id,
+	const str::dString &Class )
 {
-qRH;
-	wCasts Casts;
-qRB;
-	Casts.Init();
-	Casts.Append( Cast );
-
-	SetCastsByTags_( Id, Casts, Proxy );
-qRR;
-qRT;
-qRE;
+	HandleClass_( Id, Class, &sProxy::AddClasses, *this );
 }
 
-void sclxdhtml::SetCastByTag_(
-	const xdhdws::nstring___ &Id,
-	const str::dString &Tag,
-	const str::dString &Value,
-	xdhdws::sProxy &Proxy )
+void sclxdhtml::sProxy::RemoveClasses(
+	const str::dStrings &Ids,
+	const str::dStrings& Classes )
 {
-qRH;
-	wCast Cast;
-qRB;
-	Cast.Init( Tag, Value );
-	SetCastByTag_( Id, Cast, Proxy );
-qRR;
-qRT;
-qRE;
+	HandleClasses_( Ids, Classes, &xdhdws::sProxy::RemoveClasses, Core_ );
 }
 
-qCDEF( char *, sclxdhtml::RootTagId_, "Root" );
+void sclxdhtml::sProxy::RemoveClass(
+	const str::dString &Id,
+	const str::dString &Class )
+{
+	HandleClass_( Id, Class, &sProxy::RemoveClasses, *this );
+}
+
+void sclxdhtml::sProxy::ToggleClasses(
+	const str::dStrings &Ids,
+	const str::dStrings& Classes )
+{
+	HandleClasses_( Ids, Classes, &xdhdws::sProxy::ToggleClasses, Core_ );
+}
+
+void sclxdhtml::sProxy::ToggleClass(
+	const str::dString &Id,
+	const str::dString &Class )
+{
+	HandleClass_( Id, Class, &sProxy::ToggleClasses, *this );
+}
+
+namespace {
+	void HandleElements_(
+		const str::dStrings &Ids,
+		void (xdhdws::sProxy::* Method)( const xdhcmn::rNString &Ids ),
+		xdhdws::sProxy &Proxy )
+	{
+	qRH;
+		str::wString MergedIds;
+	qRB;
+		MergedIds.Init();
+		xdhcmn::FlatMerge( Ids, MergedIds, true );	// Passed as is to a JS script, hence 'true'.
+
+		(Proxy.*Method)( MergedIds );
+	qRR;
+	qRT;
+	qRE;
+	}
+
+	void HandleElement_(
+		const str::dString &Id,
+		void (sProxy::*Method)( const str::dStrings &Ids ),
+		sProxy &Proxy )
+	{
+	qRH;
+		str::wStrings Ids;
+	qRB;
+		Ids.Init();
+		Ids.Append( Id );
+
+		(Proxy.*Method)( Ids );
+	qRR;
+	qRT;
+	qRE;
+	}
+}
+
+void sclxdhtml::sProxy::EnableElements( const str::dStrings &Ids )
+{
+	HandleElements_( Ids, &xdhdws::sProxy::EnableElements, Core_ );
+}
+
+void sclxdhtml::sProxy::EnableElement(	const str::dString &Id )
+{
+	HandleElement_( Id, &sProxy::EnableElements, *this );
+}
+
+void sclxdhtml::sProxy::DisableElements( const str::dStrings &Ids )
+{
+	HandleElements_( Ids, &xdhdws::sProxy::EnableElements, Core_ );
+}
+
+void sclxdhtml::sProxy::DisableElement( const str::dString &Id )
+{
+	HandleElement_( Id, &sProxy::DisableElements, *this );
+}
+
+qCDEF( char *, sclxdhtml::RootTagId_, "XDHRoot" );
 
 void sclxdhtml::prolog::GetLayout(
 	sclfrntnd::rFrontend &Frontend,
@@ -575,51 +612,6 @@ qRT
 qRE
 	return ProjectType;
 }
-
-#define CAST( name )\
-	Cast.Init( str::wString( #name "Cast" ), name );\
-	Casts.Append( Cast )
-
-void sclxdhtml::prolog::GetCasts(
-	sProxy &Proxy,
-	dCasts &Casts )
-{
-qRH;
-	str::wString NewProject, PredefinedProjects, UserProject;
-	wCast Cast;
-qRB;
-	tol::Init( NewProject, PredefinedProjects, UserProject );
-
-	switch ( GetProjectType_( Proxy ) ) {
-	case sclmisc::ptNew:
-		NewProject = "Vanished";
-		PredefinedProjects = "Hidden";
-		UserProject = "Hidden";
-		break;
-	case sclmisc::ptPredefined:
-		NewProject = "Plain";
-		PredefinedProjects = "Plain";
-		UserProject = "Hidden";
-		break;
-	case sclmisc::ptRemote:
-		NewProject = "Plain";
-		PredefinedProjects = "Hidden";
-		UserProject = "Plain";
-		break;
-	default:
-		qRFwk();
-		break;
-	}
-
-	CAST( NewProject );
-	CAST( PredefinedProjects );
-	CAST( UserProject );
-qRR;
-qRT;
-qRE;
-}
-
-#undef CAST
 
 void sclxdhtml::prolog::DisplaySelectedProjectFilename(
 	sProxy &Proxy,
@@ -723,64 +715,6 @@ namespace {
 		return Proxy.GetValue( login::BackendTypeId, Type );
 	}
 }
-
-#define CAST( name )\
-	Cast.Init( str::wString( #name "BackendCast" ), name );\
-	Casts.Append( Cast )
-
-void sclxdhtml::login::GetCasts(
-	sProxy &Proxy,
-	eBackendVisibility Visibility,
-	dCasts &Casts )
-{
-qRH;
-	str::wString Type;
-	str::wString None, Straight, Embedded, Predefined, Visible;
-	wCast Cast;
-qRB;
-	tol::Init( Type, None, Straight, Embedded, Predefined, Visible );
-
-	GetBackendType_( Proxy, Type );
-
-	if ( Type == "None" ) {
-		None = "Vanished";
-		Straight = "Hidden";
-		Embedded = "Hidden";
-		Predefined = "Hidden";
-	} else if ( Type == "Straight" ) {
-		None = "Plain";
-		Straight = "Plain";
-		Embedded = "Hidden";
-		Predefined = "Hidden";
-	} else if ( Type == "Embedded" ) {
-		None = "Plain";
-		Straight = "Hidden";
-		Embedded = "Plain";
-		Predefined = "Hidden";
-	} else if ( Type == "Predefined" ) {
-		None = "Plain";
-		Straight = "Hidden";
-		Embedded = "Hidden";
-		Predefined = "Plain";
-	} else
-		qRFwk();
-
-	if ( Visibility == bvShow )
-		Visible = "Plain";
-	else
-		Visible = "Hidden";
-
-	CAST( None );
-	CAST( Straight );
-	CAST( Embedded );
-	CAST( Predefined );
-	CAST( Visible );
-qRR;
-qRT;
-qRE;
-}
-
-#undef CAST
 
 namespace straight_ {
 	namespace {

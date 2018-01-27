@@ -44,8 +44,14 @@ const char *xdhcmn::GetLabel( function__ Function )
 	C( SetLayout );
 	C( DressWidgets );
 	C( SetContents );
-	C( SetCastsByIds );
-	C( SetCastsByTags );
+	C( InsertCSSRule );
+	C( AppendCSSRule );
+	C( RemoveCSSRule );
+	C( AddClasses );
+	C( RemoveClasses );
+	C( ToggleClasses );
+	C( EnableElements );
+	C( DisableElements );
 	C( SetProperty );
 	C( GetProperty );
 	C( SetAttribute );

@@ -36,6 +36,7 @@
 namespace xdhdws {
 	using xdhcmn::nchar__;
 	using xdhcmn::nstring___;
+	using xdhcmn::rNString;
 
 	class sProxy
 	{
@@ -112,18 +113,72 @@ namespace xdhdws {
 		{
 			C_().Process(xdhcmn::fSetContents, NULL, Ids.Internal()(), Contents.Internal()() );
 		}
-		void SetCastsByIds(
-			const nstring___ &Ids,
-			const nstring___ &Casts )
+		void InsertCSSRule(
+			const rNString &Rule,
+			xdhcmn::sIndex Index )
 		{
-			C_().Process( xdhcmn::fSetCastsByIds, NULL, Ids.Internal()(), Casts.Internal()() );
+		qRH;
+			rNString SBuffer;
+			bso::bInteger IBuffer;
+		qRB;
+			SBuffer.Init( bso::Convert( *Index, IBuffer ) );
+			C_().Process( xdhcmn::fInsertCSSRule, NULL, Rule.Internal()(), SBuffer.Internal()() );
+		qRR;
+		qRT;
+		qRE;
 		}
-		void SetCastsByTags(
-			const nstring___ &Id,
-			const nstring___ &Tags,
-			const nstring___ &Casts )
+		xdhcmn::sIndex AppendCSSRule( const rNString &Rule )
 		{
-			C_().Process( xdhcmn::fSetCastsByTags, NULL, Id.Internal()( ), Tags.Internal()( ), Casts.Internal()() );
+			xdhcmn::sIndex Index = 0;
+		qRH;
+			TOL_CBUFFER___ Buffer;
+		qRB;
+			C_().Process( xdhcmn::fAppendCSSRule, &Buffer, Rule.Internal()() );
+
+			str::wString( Buffer ).ToNumber( *Index );
+		qRR;
+		qRT;
+		qRE;
+			return Index;
+		}
+		void RemoveCSSRule( xdhcmn::sIndex Index )
+		{
+		qRH;
+			rNString SBuffer;
+			bso::bInteger Buffer;
+		qRB;
+			SBuffer.Init( bso::Convert( *Index, Buffer ) );
+
+			C_().Process( xdhcmn::fRemoveCSSRule, NULL, SBuffer.Internal()() );
+		qRR;
+		qRT;
+		qRE;
+		}
+		void AddClasses(
+			const rNString &Ids,
+			const rNString &Classes )
+		{
+			C_().Process( xdhcmn::fAddClasses, NULL, Ids.Internal()(), Classes.Internal()() );
+		}
+		void RemoveClasses(
+			const rNString &Ids,
+			const rNString &Classes )
+		{
+			C_().Process( xdhcmn::fRemoveClasses, NULL, Ids.Internal()(), Classes.Internal()() );
+		}
+		void ToggleClasses(
+			const rNString &Ids,
+			const rNString &Classes )
+		{
+			C_().Process( xdhcmn::fToggleClasses, NULL, Ids.Internal()(), Classes.Internal()() );
+		}
+		void EnableElements( const rNString &Ids )
+		{
+			C_().Process( xdhcmn::fEnableElements, NULL, Ids.Internal()() );
+		}
+		void DisableElements( const rNString &Ids )
+		{
+			C_().Process( xdhcmn::fDisableElements, NULL, Ids.Internal()() );
 		}
 		const char *GetProperty(
 			const nstring___ &Id,

@@ -41,60 +41,6 @@ along with the Epeios framework.  If not, see <http://www.gnu.org/licenses/>
 # define SCLXDHTML_DEFAULT_SUFFIX "xdh"
 
 namespace sclxdhtml {
-	class dCast {
-	public:
-		str::dString
-			Tag,
-			Value;
-		struct s {
-			str::dString::s
-				Tag,
-				Value;
-		} &S_;
-		dCast( s &S )
-		: S_( S ),
-		  Tag( S.Tag ),
-		  Value( S.Value )
-		{}
-		void reset( bool P = true )
-		{
-			tol::reset( P, Tag, Value );
-		}
-		void plug( qASd *AS )
-		{
-			tol::plug( AS, Tag, Value );
-		}
-		dCast &operator =( const dCast &C )
-		{
-			Tag = C.Tag;
-			Value = C.Value;
-
-			return *this;
-		}
-		void Init( void )
-		{
-			tol::Init( Tag, Value );
-		}
-		void Init(
-			const str::dString &Tag,
-			const str::dString &Value )
-		{
-			this->Tag.Init( Tag );
-			this->Value.Init( Value );
-		}
-		void Init(
-			const char *Tag,
-			const char *Value )
-		{
-			Init( str::wString( Tag ), str::wString( Value ) );
-		}
-	};
-
-	qW( Cast );
-
-	typedef crt::qCRATEdl( dCast ) dCasts;
-	qW( Casts );
-
 	namespace registry {
 		using rgstry::rEntry;
 
@@ -105,8 +51,7 @@ namespace sclxdhtml {
 		namespace definition {
 			using namespace sclrgstry::definition;
 
-			extern rEntry XSLLayoutFile;
-			extern rEntry XSLCastingFile;
+			extern rEntry XSLFile;
 		}
 	}
 
@@ -274,42 +219,168 @@ namespace sclxdhtml {
 
 	typedef xdhcmn::cSession cSession_;
 
-	using xdhdws::sProxy;
+	class sProxy
+	{
+	private:
+		xdhdws::sProxy Core_;
+	protected:
+		void SetLayout_(
+			const xdhdws::nstring___ &Id,
+			const rgstry::rEntry &Filename,
+			const char *Target,
+			const sclrgstry::registry_ &Registry,
+			const str::dString &XML,
+			bso::char__ Marker );
+		template <typename session, typename rack> void SetLayout_(
+			const xdhdws::nstring___ &Id,
+			const char *Target,
+			const sclrgstry::registry_ &Registry,
+			void( *Get )(session &Session, xml::dWriter &Writer),
+			session &Session,
+			bso::char__ Marker = '#' )
+			{
+			qRH;
+				rack Rack;
+			qRB;
+				Rack.Init( Target, Session );
 
-	void Alert(
-		const ntvstr::string___ &XML,
-		const ntvstr::string___ &XSL,
-		const ntvstr::string___ &Title,
-		sProxy &Proxy,
-		const char *Language );
+				Get( Session, Rack() );
 
-	void Alert(
-		const ntvstr::string___ &RawMessage,
-		const char *Language,
-		sProxy &Proxy );	// Translates 'Message'.
-
-	void Alert(
-		const ntvstr::string___ &Message,
-		sProxy &Proxy,
-		const char *Language );	// Displays 'Message' as is. 'Language' is used for the closing text message.
-
-	bso::bool__ Confirm(
-		const ntvstr::string___ &XML,
-		const ntvstr::string___ &XSL,
-		const ntvstr::string___ &Title,
-		sProxy &Proxy,
-		const char *Language );
-
-	bso::bool__ Confirm(
-		const ntvstr::string___ &RawMessage,
-		const char *Language,
-		sProxy &Proxy );
-
-	bso::bool__ Confirm(
-		const ntvstr::string___ &Message,
-		sProxy &Proxy,
-		const char *Language );	// Displays 'Message' as is. 'Language' is used for the closing text message.
-
+				SetLayout_( Id, registry::definition::XSLFile, Target, Registry, Rack.Target(), Marker );
+			qRR;
+			qRT;
+			qRE;
+			}
+	public:
+		void reset( bso::sBool P = true )
+		{
+			tol::reset( P, Core_ );
+		}
+		qCDTOR( sProxy );
+		void Init( xdhcmn::cProxy *Proxy )
+		{
+			Core_.Init( Proxy );
+		}
+		void Log( const ntvstr::rString &Message )
+		{
+			Core_.Log( Message );
+		}
+		void Alert(
+			const ntvstr::string___ &XML,
+			const ntvstr::string___ &XSL,
+			const ntvstr::string___ &Title,
+			const char *Language );
+		void AlertT(
+			const ntvstr::string___ &RawMessage,
+			const char *Language );	// Translates 'Message'.
+		void AlertU(
+			const ntvstr::string___ &Message,
+			const char *Language );	// Displays 'Message' as is. 'Language' is used for the closing text message.
+		bso::bool__ Confirm(
+			const ntvstr::string___ &XML,
+			const ntvstr::string___ &XSL,
+			const ntvstr::string___ &Title,
+			const char *Language );
+		bso::bool__ ConfirmT(
+			const ntvstr::string___ &RawMessage,
+			const char *Language );
+		bso::bool__ ConfirmU(
+			const ntvstr::string___ &Message,
+			const char *Language );	// Displays 'Message' as is. 'Language' is used for the closing text message.
+		void SetValue(
+			const ntvstr::rString &Id,
+			const ntvstr::rString &Value )
+		{
+			Core_.SetValue( Id, Value );
+		}
+		const str::dString &GetValue(
+			const ntvstr::rString &Id,
+			str::dString &Value )
+		{
+			return Core_.GetValue( Id, Value );
+		}
+		const char *GetValue(
+			const ntvstr::rString &Id,
+			qCBUFFERr &Value )
+		{
+			return Core_.GetValue( Id, Value );
+		}
+		const str::dString &GetResult(
+			const ntvstr::rString &Id,
+			str::dString &Result )
+		{
+			return Core_.GetResult( Id, Result );
+		}
+		const char *GetResult(
+			const ntvstr::rString &Id,
+			qCBUFFERr &Result )
+		{
+			return Core_.GetResult( Id, Result );
+		}
+		void SetContents(
+			const str::dStrings &Ids,
+			const str::dStrings &Contents );
+		void SetContent(
+			const str::dString &Id,
+			const str::dString &Content );
+		void InsertCSSRule(
+			const str::dString &Rule,
+			xdhcmn::sIndex Index );
+		xdhcmn::sIndex AppendCSSRule( const str::dString &Rule );
+		void RemoveCSSRule( xdhcmn::sIndex Index );
+		void AddClasses(
+			const str::dStrings &Ids,
+			const str::dStrings &Classes );
+		void AddClass(
+			const str::dString &Id,
+			const str::dString &Class );
+		void AddClass(
+			const char *Id,
+			const char *Class )
+		{
+			AddClass( str::wString( Id ), str::wString( Class ) );
+		}
+		void RemoveClasses(
+			const str::dStrings &Ids,
+			const str::dStrings &Classes );
+		void RemoveClass(
+			const str::dString &Id,
+			const str::dString &Class );
+		void RemoveClass(
+			const char *Id,
+			const char *Class )
+		{
+			RemoveClass( str::wString( Id ), str::wString( Class ) );
+		}
+		void ToggleClasses(
+			const str::dStrings &Idss,
+			const str::dStrings &Classes );
+		void ToggleClass(
+			const str::dString &Id,
+			const str::dString &Class );
+		void ToggleClass(
+			const char *Id,
+			const char *Class )
+		{
+			ToggleClass( str::wString( Id ), str::wString( Class ) );
+		}
+		void EnableElements( const str::dStrings &Ids );
+		void EnableElement( const str::dString &Id );
+		void EnableElement( const char *Id )
+		{
+			EnableElement( str::wString( Id ) );
+		}
+		void DisableElements( const str::dStrings &Ids );
+		void DisableElement( const str::dString &Id);
+		void DisableElement( const char *Id )
+		{
+			DisableElement( str::wString( Id ) );
+		}
+		void DressWidgets( const ntvstr::rString &Id )
+		{
+			Core_.DressWidgets( Id );
+		}
+	};
 
 	class reporting_callback__
 	: public _reporting_callback__ {
@@ -322,10 +393,10 @@ namespace sclxdhtml {
 			const char *Message ) override
 		{
 			if ( Reply == fblovl::rDisconnected )
-				Alert( "SCLXHTML_Disconnected", L_(), P_() );
+				P_().AlertT( "SCLXHTML_Disconnected", L_() );
 			else {
 				//				sclmisc::ReportAndAbort( Message );
-				Alert( Message, P_(), L_() );
+				P_().AlertU( Message, L_() );
 				qRAbort();
 			}
 		}
@@ -359,89 +430,7 @@ namespace sclxdhtml {
 		bv_Undefined
 	};
 
-	extern const char *RootTagId_;
-
-	typedef void( *fSet )( xdhdws::sProxy &Proxy, const xdhdws::nstring___ &Id, const xdhdws::nstring___ &XML, const xdhdws::nstring___ &XSL );
-
-	void SetElement_(
-		const xdhdws::nstring___ &Id,
-		fSet Set,
-		const rgstry::rEntry &Filename,
-		const char *Target,
-		const sclrgstry::registry_ &Registry,
-		const str::dString &XML,
-		xdhdws::sProxy &Proxy,
-		bso::char__ Marker );
-
-	void SetContents_(
-		const str::dStrings &Ids,
-		const str::dStrings &Contents,
-		xdhdws::sProxy &Proxy );
-
-	void SetContent_(
-		const str::dString &Id,
-		const str::dString &Content,
-		xdhdws::sProxy &Proxy );
-
-	void SetCastsByIds_(
-		const str::dStrings &Ids,
-		const str::dStrings &Values,
-		xdhdws::sProxy &Proxy );
-
-	void SetCastsByTags_(
-		const xdhdws::nstring___ &Id,
-		const dCasts &Casts,
-		xdhdws::sProxy &Proxy );
-
-	void SetCastById_(
-		const xdhdws::nstring___ &Id,
-		const xdhdws::nstring___ &Value,
-		xdhdws::sProxy &Proxy );
-
-	void SetCastByTag_(
-		const xdhdws::nstring___ &Id,
-		const dCast &Cast,
-		xdhdws::sProxy &Proxy );
-
-	void SetCastByTag_(
-		const xdhdws::nstring___ &Id,
-		const str::dString &Tag,
-		const str::dString &Value,
-		xdhdws::sProxy &Proxy );
-
-	inline void SetCastByTag_(
-		const xdhdws::nstring___ &Id,
-		const char *Tag,
-		const char *Value,
-		xdhdws::sProxy &Proxy )
-	{
-		return SetCastByTag_( Id, str::wString( Tag ), str::wString( Value ), Proxy );
-	}
-
-	template <typename session, typename rack> inline void SetElement_(
-		const xdhdws::nstring___ &Id,
-		const char *Target,
-		const rgstry::rEntry &Filename,
-		void( *Get )( session &Session, xml::dWriter &Writer ),
-		fSet Set,
-		const sclrgstry::registry_ &Registry,
-		session &Session,
-		bso::char__ Marker = '#' )
-	{
-	qRH;
-		rack Rack;
-	qRB;
-		Rack.Init( Target, Session );
-
-		Get( Session, Rack() );
-
-		SetElement_( Id, Set, Filename, Target, Registry, Rack.Target(), Session, Marker );
-	qRR;
-	qRT;
-	qRE;
-	}
-
-	template <typename session, typename dump> class rRack_
+	template <typename session, typename dump> class rRack
 	{
 	private:
 		str::wString Target_;
@@ -452,10 +441,9 @@ namespace sclxdhtml {
 		{
 			tol::reset( P, Target_, _Flow, _Writer );
 		}
-		E_CDTOR( rRack_ );
+		E_CDTOR( rRack );
 		void Init(
 			const char *View,
-			const char *Background,
 			session &Session )
 		{
 			tol::buffer__ Buffer;
@@ -466,17 +454,16 @@ namespace sclxdhtml {
 			_Writer.Init( _Flow, xml::oIndent, xml::e_Default );
 			_Writer.PushTag( "XDHTML" );
 			_Writer.PutAttribute( "View", View );
-			_Writer.PutAttribute( "Background", Background );
 			_Writer.PutAttribute( "Generator", sclmisc::SCLMISCTargetName );
 			_Writer.PutAttribute( "TimeStamp", tol::DateAndTime( Buffer ) );
 			_Writer.PutAttribute( "OS", cpe::GetOSDigest() );
 			Mark = _Writer.PushTag( "Corpus" );
 			dump::Corpus( Session, _Writer );
 			_Writer.PopTag( Mark );
-			_Writer.PushTag( Background );
+			_Writer.PushTag( "Layout" );
 			dump::Common( Session, _Writer );
 		}
-		operator xml::writer_ &( )
+		operator xml::writer_ &()
 		{
 			return _Writer;
 		}
@@ -493,51 +480,12 @@ namespace sclxdhtml {
 		}
 	};
 
-	template <typename session, typename dump> class rLayoutRack
-	: public rRack_<session, dump> {
-	public:
-		void Init(
-			const char *View,
-			session &Session )
-		{
-			rRack_<session, dump>::Init( View, "Layout", Session );
-		}
-	};
-
-	inline void SetLayout_(
-		xdhdws::sProxy &Proxy,
-		const xdhcmn::nstring___ &Id,
-		const xdhcmn::nstring___ &XML,
-		const xdhcmn::nstring___ &XSL )
-	{
-		Proxy.SetLayout( Id, XML, XSL );
-	}
-
-	template <typename session, typename dump> inline void SetElementLayout(
-		const xdhdws::nstring___ &Id,
-		const char *Target,
-		void( *Get )( session &Session, xml::dWriter &Writer ),
-		const sclrgstry::registry_ &Registry,
-		session &Session,
-		bso::char__ Marker = '#' )
-	{
-		SetElement_<session, rLayoutRack<session, dump>>( Id, Target, registry::definition::XSLLayoutFile, Get, SetLayout_, Registry, Session, Marker );
-	}
-
-	template <typename session, typename dump> inline void SetDocumentLayout(
-		const char *Target,
-		void( *Get )( session &Session, xml::dWriter &Writer ),
-		const sclrgstry::registry_ &Registry,
-		session &Session,
-		bso::char__ Marker = '#' )
-	{
-		SetElementLayout<session, dump>( RootTagId_, Target, Get, Registry, Session, Marker );
-	}
-
 	template <typename session> class rCore;
 
+	extern const char *RootTagId_;
+
 	// User put in 'instances' all his own objects, instantiating all with a 'new' (by overloading 'SCLXHTMLNew(...)'), a 'delete' will be made automatically when unloading the library.
-	template <typename instances, typename frontend, typename page, page UndefinedPage, typename dump > class rSession
+	template <typename instances, typename frontend, typename page, page UndefinedPage, typename dump> class rSession
 	: public cSession_,
 	  public sProxy,
 	  public instances,
@@ -618,18 +566,18 @@ namespace sclxdhtml {
 		}
 		void AlertU( const ntvstr::string___ &Message )	// Displays 'Message' as is.
 		{
-			sclxdhtml::Alert( Message, *this, Language() );
+			sProxy::AlertU( Message, Language() );
 		}
 		void AlertT( const ntvstr::string___ &RawMessage )	// Translates 'RawMessage'.
 		{
-			sclxdhtml::Alert( RawMessage, Language(), *this );
+			sProxy::AlertT( RawMessage, Language() );
 		}
 		void Alert(
 			const ntvstr::string___ &XML,
 			const ntvstr::string___ &XSL,
 			const ntvstr::string___ &Title )
 		{
-			sclxdhtml::Alert( XML, XSL, Title, *this, Language() );
+			sProxy::Alert( XML, XSL, Title, Language() );
 		}
 		template <typename i> void Alert( i I )
 		{
@@ -639,18 +587,18 @@ namespace sclxdhtml {
 		}
 		bso::bool__ ConfirmU( const ntvstr::string___ &Message )	// Displays 'Message' as is.
 		{
-			return sclxdhtml::Confirm( Message, *this, Language() );
+			return sProxy::ConfirmU( Message, Language() );
 		}
 		bso::bool__ ConfirmT( const ntvstr::string___ &RawMessage )	// Translates 'RawMessage'.
 		{
-			return sclxdhtml::Confirm( RawMessage, Language(), *this );
+			return sProxy::ConfirmT( RawMessage, Language() );
 		}
 		bso::bool__ Confirm(
 			const ntvstr::string___ &XML,
 			const ntvstr::string___ &XSL,
 			const ntvstr::string___ &Title )
 		{
-			return sclxdhtml::Confirm( XML, XSL, Title, this, Language() );
+			return sProxy::Confirm( XML, XSL, Title, Language() );
 		}
 		qRWDISCLOSEr( eBackendVisibility, BackendVisibility );
 		qRODISCLOSEr( page, Page );
@@ -660,7 +608,7 @@ namespace sclxdhtml {
 			void( *Get )( rSession &Session, xml::dWriter &Writer ),
 			const sclrgstry::dRegistry &Registry )
 		{
-			sclxdhtml::SetElementLayout<rSession, dump>( Id, Target, Get, Registry, *this );
+			sProxy::SetLayout_<rSession, rRack<rSession,dump>>( Id, Target, Registry, Get, *this );
 		}
 		void SetElementLayout(
 			const xdhdws::nstring___ &Id,
@@ -674,7 +622,7 @@ namespace sclxdhtml {
 			void( *Get )( rSession &Session, xml::dWriter &Writer ),
 			const sclrgstry::dRegistry &Registry )
 		{
-			sclxdhtml::SetDocumentLayout<rSession, dump>( Target, Get, Registry, *this );
+			SetElementLayout( RootTagId_, Target, Get, Registry );
 		}
 		void SetDocumentLayout(
 			const char *Target,
@@ -686,65 +634,19 @@ namespace sclxdhtml {
 			const str::dStrings &Ids,
 			const str::dStrings &Contents )
 		{
-			sclxdhtml::SetContents_( Ids, Contents, *this );
+			sProxy::SetContents( Ids, Contents );
 		}
 		void SetContent(
 			const str::dString &Id,
 			const str::dString &Content )
 		{
-			sclxdhtml::SetContent_( Id, Content, *this );
+			sProxy::SetContent( Id, Content );
 		}
 		void SetContent(
 			const char *Id,
 			const str::dString &Content )
 		{
-			sclxdhtml::SetContent_( str::wString( Id ), Content, *this );
-		}
-		void SetElementCasts(
-			const xdhdws::nstring___ &Id,
-			const dCasts &Casts )
-		{
-			sclxdhtml::SetCastsByTags_( Id, Casts, *this );
-		}
-		void SetElementCast(
-			const xdhdws::nstring___ &Id,
-			const dCast &Cast )
-		{
-			sclxdhtml::SetCastsByTags_( Id, Cast, *this );
-		}
-		void SetElementCast(
-			const xdhdws::nstring___ &Id,
-			const str::dString &Tag,
-			const str::dString &Value )
-		{
-			sclxdhtml::SetCastByTag_( Id, Tag, Value, *this );
-		}
-		void SetElementCast(
-			const xdhdws::nstring___ &Id,
-			const char *Tag,
-			const char *Value )
-		{
-			sclxdhtml::SetCastByTag_( Id, Tag, Value, *this );
-		}
-		void SetDocumentCasts( const dCasts &Casts )
-		{
-			sclxdhtml::SetCastsByTags_( RootTagId_, Casts, *this );
-		}
-		void SetDocumentCast( const dCast &Cast )
-		{
-			sclxdhtml::SetCastByTag_( RootTagId_, Cast, *this );
-		}
-		void SetDocumentCast(
-			const str::dString &Tag,
-			const str::dString &Value )
-		{
-			sclxdhtml::SetCastByTag_( RootTagId_, Tag, Value, *this );
-		}
-		void SetDocumentCast(
-			const char *Tag,
-			const char *Value )
-		{
-			sclxdhtml::SetCastByTag_( RootTagId_, Tag, Value, *this );
+			SetContent( str::wString( Id ), Content );
 		}
 	};
 
@@ -858,10 +760,6 @@ namespace sclxdhtml {
 			sclfrntnd::rFrontend &Frontend,
 			xml::writer_ &Writer );
 
-		void GetCasts(
-			sProxy &Proxy,
-			dCasts &Casts );
-
 		void DisplaySelectedProjectFilename(
 			sProxy &Proxy,
 			const char *Id );
@@ -884,11 +782,6 @@ namespace sclxdhtml {
 		sclfrntnd::eLogin GetLayout(
 			sclfrntnd::rFrontend &Frontend,
 			xml::writer_ &Writer );
-
-		void GetCasts(
-			sProxy &Proxy,
-			eBackendVisibility Visibility,
-			dCasts &Casts );
 
 		void GetBackendFeatures(
 			sProxy &Proxy,

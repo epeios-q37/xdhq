@@ -1,6 +1,99 @@
 # *Epeios* changelog
 
+2018-01-27:
+- V8Q:
+  - fixing missing method in *Node.js* v4,
+
+2018-01-26:
+- NODEQ:
+  - adaptation to modification in *V8Q*,
+ - N4NJS
+  - reporting missing callback,
+- SCLNJS:
+  - adaptation to modifications in *N4NJS*,
+- V8Q:
+  - a value and derived can now be initialized with an undefined value; useful to handle callback parameter, when none is provided by user,
+  - consolidation of the emptiness of an object,
+
+2018-01-25:
+- MTHTMC
+  - using *MTHRTN* instead of *MTHFRC*,
+- THT:
+  - introducing `rReadWrite`,
+
+2018-01-17:
+- *common*:
+  - **$**: handling array of strings,
+- N4ZND:
+  - **$**,
+- SCLZND:
+  - **$**,
+
+2018-01-16:
+- *common*:
+  - **$**: handling array of strings,
+- JNIQ:
+  - **$**,
+- N4JRE:
+  - **$**,
+- SCLJRE:
+  - **$**,
+
+2018-01-15:
+- *common*:
+  - **$**: adding handling of booleans,
+- N4JRE:
+  - **$**,
+- SCLJRE:
+  - **$**,
+
+2018-01-12:
+- *common*:
+  - **$**:
+    - improving *CSS* classes and rules handling,
+    - adding element disabling/enabling features,
+- SCLXDHTML:
+  - **$**,
+- XDHCMN:
+  - **$**,
+- XDHDWS:
+  - **$**,
+- XDHUJP:
+  - **$**,
+- XDHUJS:
+  - **$**,
+
+2018-01-11:
+- *common*:
+  - **$**: replacing *cast* related operations handling by operations on *CSS* related classes and rules (continued),
+- SCLXDHTML:
+  - **$**,
+- XDHCMN:
+  - **$**,
+- XDHDWS:
+  - **$**,
+- XDHUJP:
+  - **$**,
+- XDHUJR:
+  - **$**,
+- XDHUJS:
+  - **$**,
+
 2018-01-10:
+- *common*:
+  - **$**: replacing *cast* related operations handling by operations on *CSS* related classes and rules,
+- SCLXDHTML:
+  - **$**,
+- XDHCMN:
+  - **$**,
+- XDHDWS:
+  - **$**,
+- XDHUJP:
+  - **$**,
+- XDHUJR:
+  - **$**,
+- XDHUJS:
+  - **$**,
 - XDHUTL:
   - fixing *Clang* warning,
 
