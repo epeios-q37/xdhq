@@ -215,7 +215,7 @@ namespace sclxdhtml {
 		}
 	};
 
-	typedef fblfrd::reporting_callback__ _reporting_callback__;
+	typedef fblfrd::reporting_callback__ sReporting_;
 
 	typedef xdhcmn::cSession cSession_;
 
@@ -223,6 +223,24 @@ namespace sclxdhtml {
 	{
 	private:
 		xdhdws::sProxy Core_;
+		void Alert_(
+			const ntvstr::string___ &XML,
+			const ntvstr::string___ &XSL,
+			const ntvstr::string___ &Title,
+			const char *Language );
+		void Alert_(
+			const ntvstr::string___ &Message,
+			const char *MessageLanguage,	// If != 'NULL', 'Message' is translated, otherwise it is displayed as is.
+			const char *CloseTextLanguage );
+		bso::bool__ Confirm_(
+			const ntvstr::string___ &XML,
+			const ntvstr::string___ &XSL,
+			const ntvstr::string___ &Title,
+			const char *Language );
+		bso::sBool Confirm_(
+			const ntvstr::string___ &Message,
+			const char *MessageLanguage,	// If != 'NULL', 'Message' is translated, otherwise it is displayed as is.
+			const char *CloseTextLanguage );
 	protected:
 		void SetLayout_(
 			const xdhdws::nstring___ &Id,
@@ -269,7 +287,10 @@ namespace sclxdhtml {
 			const ntvstr::string___ &XML,
 			const ntvstr::string___ &XSL,
 			const ntvstr::string___ &Title,
-			const char *Language );
+			const char *Language )
+		{
+			Alert_( XML, XSL, Title, Language );
+		}
 		void AlertT(
 			const ntvstr::string___ &RawMessage,
 			const char *Language );	// Translates 'Message'.
@@ -280,7 +301,10 @@ namespace sclxdhtml {
 			const ntvstr::string___ &XML,
 			const ntvstr::string___ &XSL,
 			const ntvstr::string___ &Title,
-			const char *Language );
+			const char *Language )
+		{
+			Confirm_( XML, XSL, Title, Language );
+		}
 		bso::bool__ ConfirmT(
 			const ntvstr::string___ &RawMessage,
 			const char *Language );
@@ -382,8 +406,8 @@ namespace sclxdhtml {
 		}
 	};
 
-	class reporting_callback__
-	: public _reporting_callback__ {
+	class sReporting
+	: public sReporting_ {
 	private:
 		Q37_MRMDF( sProxy, P_, Proxy_ );
 		Q37_MPMDF( const char, L_, Language_ );
@@ -403,15 +427,15 @@ namespace sclxdhtml {
 	public:
 		void reset( bso::bool__ P = true )
 		{
-			_reporting_callback__::reset( P );
+			sReporting_::reset( P );
 			Proxy_ = NULL;
 		}
-		E_CVDTOR( reporting_callback__ );
+		E_CVDTOR( sReporting );
 		void Init(
 			sProxy &Proxy,
 			const char *Language )
 		{
-			_reporting_callback__::Init();
+			sReporting_::Init();
 			Proxy_ = &Proxy;
 			Language_ = Language;
 		}
@@ -493,7 +517,7 @@ namespace sclxdhtml {
 	{
 	private:
 		page Page_;	// Current page;
-		reporting_callback__ _ReportingCallback;
+		sReporting Reporting_;
 		eBackendVisibility BackendVisibility_;
 		qRMV( class rCore<rSession>, C_, Core_ );
 	protected:
@@ -509,7 +533,7 @@ namespace sclxdhtml {
 			instances::reset( P );
 			frontend::reset( P );
 			Page_ = UndefinedPage;
-			_ReportingCallback.reset( P );
+			Reporting_.reset( P );
 			BackendVisibility_ = bv_Undefined;
 			sProxy::reset();
 			Core_ = NULL;
@@ -522,8 +546,8 @@ namespace sclxdhtml {
 				class rCore<rSession> &Core )
 		{
 			sProxy::Init( Callback );
-			_ReportingCallback.Init( *this, Language );
-			frontend::Init( Kernel, Language, _ReportingCallback );
+			Reporting_.Init( *this, Language );
+			frontend::Init( Kernel, Language, Reporting_ );
 			Page_ = UndefinedPage;
 			// instances::Init( *this );	// Made on connection.
 			BackendVisibility_ = bvShow;	// By default, the backend part of the login page is shown.

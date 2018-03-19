@@ -224,7 +224,7 @@ namespace {
 	}
 }
 
-void sclxdhtml::sProxy::Alert(
+void sclxdhtml::sProxy::Alert_(
 	const ntvstr::string___ &XML,
 	const ntvstr::string___ &XSL,
 	const ntvstr::string___ &Title,
@@ -242,43 +242,40 @@ qRT
 qRE
 }
 
-namespace{
-	void Alert_(
-		const ntvstr::string___ &Message,
-		const char *MessageLanguage,	// If != 'NULL', 'Message' is translated, otherwise it is displayed as is.
-		sProxy &Proxy,
-		const char *CloseTextLanguage )
-	{
-	qRH
-		str::string XML, XSL;
-	qRB
-		XML.Init();
-		XSL.Init();
+void sclxdhtml::sProxy::Alert_(
+	const ntvstr::string___ &Message,
+	const char *MessageLanguage,	// If != 'NULL', 'Message' is translated, otherwise it is displayed as is.
+	const char *CloseTextLanguage )
+{
+qRH
+	str::string XML, XSL;
+qRB
+	XML.Init();
+	XSL.Init();
 
-		SetXMLAndXSL_( Message, MessageLanguage, XML, XSL );
+	SetXMLAndXSL_( Message, MessageLanguage, XML, XSL );
 
-		Proxy.Alert(XML, XSL, ntvstr::string___(), CloseTextLanguage );
-	qRR
-	qRT
-	qRE
-	}
+	Alert_(XML, XSL, ntvstr::string___(), CloseTextLanguage );
+qRR
+qRT
+qRE
 }
 
 void sclxdhtml::sProxy::AlertT(
 	const ntvstr::string___ &RawMessage,
 	const char *Language )
 {
-	Alert_( RawMessage, Language, *this, Language );
+	Alert_( RawMessage, Language, Language );
 }
 
 void sclxdhtml::sProxy::AlertU(
 	const ntvstr::string___ &Message,
 	const char *Language )
 {
-	Alert_( Message, NULL, *this, Language );
+	Alert_( Message, NULL, Language );
 }
 
-bso::bool__ sclxdhtml::sProxy::Confirm(
+bso::bool__ sclxdhtml::sProxy::Confirm_(
 	const ntvstr::string___ &XML,
 	const ntvstr::string___ &XSL,
 	const ntvstr::string___ &Title,
@@ -298,42 +295,40 @@ qRE
 	return Confirmation;
 }
 
-namespace {
-	bso::bool__ Confirm_(
-		const ntvstr::string___ &Message,
-		const char *MessageLanguage,	// If != 'NULL', 'Message' is translates, otherwise it is displayed as is.
-		sProxy &Proxy,
-		const char *CloseTextLanguage )
-	{
-		bso::bool__ Confirmation = false;
-	qRH
-		str::string XML, XSL;
-	qRB
-		XML.Init();
-		XSL.Init();
+bso::bool__ sclxdhtml::sProxy::Confirm_(
+	const ntvstr::string___ &Message,
+	const char *MessageLanguage,	// If != 'NULL', 'Message' is translates, otherwise it is displayed as is.
+	const char *CloseTextLanguage )
+{
+	bso::bool__ Confirmation = false;
+qRH
+	str::string XML, XSL;
+qRB
+	XML.Init();
+	XSL.Init();
 
-		SetXMLAndXSL_( Message, MessageLanguage, XML, XSL );
+	SetXMLAndXSL_( Message, MessageLanguage, XML, XSL );
 
-		Confirmation = Proxy.Confirm( XML, XSL, ntvstr::string___(), CloseTextLanguage );
-	qRR
-	qRT
-	qRE
-		return Confirmation;
-	}
+	Confirmation = Confirm_( XML, XSL, ntvstr::string___(), CloseTextLanguage );
+qRR
+qRT
+qRE
+	return Confirmation;
 }
+
 
 bso::bool__ sclxdhtml::sProxy::ConfirmT(
 	const ntvstr::string___ &RawMessage,
 	const char *Language )
 {
-	return Confirm_( RawMessage,  Language, *this, Language );
+	return Confirm_( RawMessage, Language, Language );
 }
 
 bso::bool__ sclxdhtml::sProxy::ConfirmU(
 	const ntvstr::string___ &Message,
 	const char *Language )
 {
-	return Confirm_( Message,  NULL, *this, Language );
+	return Confirm_( Message,  NULL, Language );
 }
 
 void sclxdhtml::HandleError(

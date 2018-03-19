@@ -88,7 +88,7 @@ namespace xdhdws {
 		qRH
 			TOL_CBUFFER___ Buffer;
 		qRB
-			C_().Process( xdhcmn::fConfirm, &Buffer, XML.Internal()( ), XSL.Internal()( ), Title.Internal()(), CloseText.Internal()() );
+			C_().Process( xdhcmn::fConfirm, &Buffer, XML.Internal()(), XSL.Internal()(), Title.Internal()(), CloseText.Internal()() );
 
 			Confirmed = !strcmp( "true", Buffer );
 		qRR
@@ -101,7 +101,7 @@ namespace xdhdws {
 			const nstring___ &XML,
 			const nstring___ &XSL )
 		{
-			C_().Process( xdhcmn::fSetLayout, NULL, Id.Internal()( ), XML.Internal()( ), XSL.Internal()( ) );
+			C_().Process( xdhcmn::fSetLayout, NULL, Id.Internal()(), XML.Internal()(), XSL.Internal()() );
 		}
 		void DressWidgets( const nstring___ &Id )
 		{
