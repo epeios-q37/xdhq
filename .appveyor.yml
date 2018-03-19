@@ -1,13 +1,6 @@
 environment:
   version: 20180227
   affix: xdhqxdh
-  matrix:
-    - nodejs_version: "4"
-    - nodejs_version: "5"
-    - nodejs_version: "6"
-    - nodejs_version: "7"
-    - nodejs_version: "8"
-    - nodejs_version: "9"
 
 skip_tags: true	
 
@@ -22,12 +15,8 @@ os :
 # - Visual Studio 2015
 - Visual Studio 2017
 
-install:
-- ps: Install-Product node $env:nodejs_version $env:platform
-# - npm install njsq
 
 after_build:
-- node -e "console.log( process.versions.modules + ' - ' + require('./package.json').version)"
 - if "%platform%"=="x86" set platform=ia32
 - echo | set /p="%affix%-v%version%" >>tmpfile.tmp || true
 - echo | set /p="-win32-" >>tmpfile.tmp || true
@@ -40,14 +29,6 @@ after_build:
 # It MUST be '.tar.gz' to be retrieved by 'node-pre-gyp' when installed with 'npm' !
 - 7z a -ttar -so dummy %dir% | 7z a -si %addon%.tar.gz
 
-test_script:
-- node --version
-- npm --version
-# - npm explore njsq -- node test.js
-# Above line does not work properly under node 4 & 5, so below command is used instead.
-- node -e "process.stdout.write( \"***** 'NJSq' TEST BEGIN *****\n\" )" && node node_modules/njsq/test.js && node -e "process.stdout.write( \"***** 'NJSq' TEST END *****\n\" )"
-- node -e "process.stdout.write( \"********** 'XDHq' TEST BEGIN **********\n\" )" && node test.js && node -e "process.stdout.write( \"\n********** 'XDHq' TEST END **********\n\" )"
-
 artifacts:
 - path: '*.tar.gz'
 
@@ -58,10 +39,7 @@ deploy:
   auth_token:
     secure: kKebvPLjikQbZ7E1Vm8omoYc9K0wOcKxjWsglp3+D4fV9ev/FaWr8ZBI+AseOTis
   draft: false
-  prerelease: false
-  on:
-   nodejs_version: "8"
-
+  prerelease: false
 matrix:
   allow_failures:
     - nodejs_version: "5"
