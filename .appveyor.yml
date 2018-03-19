@@ -24,16 +24,7 @@ os :
 
 install:
 - ps: Install-Product node $env:nodejs_version $env:platform
-- npm install -g node-gyp
-- npm install -g node-pre-gyp	# to allow use as command in a console (for the build).
-- npm install node-pre-gyp		# to allow use as module in a JS file (for the test).
-- npm install njsq
-
-before_build:
-- node-pre-gyp configure
-
-build_script:
-- node-pre-gyp /m build
+# - npm install njsq
 
 after_build:
 - node -e "console.log( process.versions.modules + ' - ' + require('./package.json').version)"
