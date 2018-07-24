@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 1999-2017 Claude SIMON (http://q37.info/contact/).
+	Copyright (C) 1999 Claude SIMON (http://q37.info/contact/).
 
 	This file is part of the Epeios framework.
 
@@ -21,19 +21,20 @@
 
 #include "sclxdhtml.h"
 
+#include "cdgurl.h"
+
 using namespace sclxdhtml;
 
 namespace {
 	using rgstry::rEntry;
 
 	namespace {
-		namespace {
-			rEntry XSLFiles_( "XSLFiles", sclrgstry::Definitions );
-		}
+		rEntry XSLFiles_( "XSLFiles", sclrgstry::Definitions );
 		rEntry UntaggedXSLFile_( "XSLFile", XSLFiles_ );
 	}
 }
 
+rgstry::rEntry registry::definition::XSLFilesHandling( "@Handling", XSLFiles_ );
 rgstry::rEntry registry::definition::XSLFile( RGSTRY_TAGGING_ATTRIBUTE( "target" ), UntaggedXSLFile_ );
 
 namespace {
@@ -84,7 +85,7 @@ namespace {
 
 			if ( Launcher_ == NULL ) {
 				Launcher_ = Data.LauncherIdentification();
-				sclmisc::Initialize( Data.SCLRack(), Data.Localization() );
+				sclmisc::Initialize( Data.SCLRack(), Data.Localization(), SCLXDHTMLInfo() );
 
 				SCLXDHTMLInitialization( Data.Mode() );
 			}
@@ -102,9 +103,10 @@ namespace {
 		}
 		virtual xdhcmn::cSession *XDHCMNRetrieveCallback(
 			const char *Language,
+			const str::dString &Token,
 			xdhcmn::cProxy *ProxyCallback ) override
 		{
-			return SCLXDHTMLRetrieveCallback( Language, Mode_, ProxyCallback );
+			return SCLXDHTMLRetrieveCallback( Language, Mode_, Token, ProxyCallback );
 		}
 		virtual void XDHCMNReleaseCallback( xdhcmn::cSession *Callback ) override
 		{
@@ -152,7 +154,7 @@ qRFE(DoNothing_())
 }
 
 namespace {
-	void SetXML_(
+	void PutInXML_(
 		const str::string_  &Message,
 		str::string_ &XML )
 	{
@@ -169,7 +171,7 @@ namespace {
 	qRE
 	}
 
-	void SetXML_(
+	void TanslateAndPutInXML_(
 		const str::string_  &RawMessage,
 		const char *Language,
 		str::string_ &XML )
@@ -181,25 +183,29 @@ namespace {
 		Message.Init();
 		scllocale::GetTranslation( RawMessage.Convert( Buffer ), Language, Message );
 
-		SetXML_( Message, XML );
+		PutInXML_( Message, XML );
 	qRR
 	qRT
 	qRE
 	}
 
-	inline void SetXSL_( str::string_ &XSL )
+	inline void EncodeXSL_(
+		const str::string_ &Plain,
+		str::dString &Encoded )
 	{
-		XSL.Append("<?xml version=\"1.0\" encoding=\"utf-8\"?>\
-			<xsl:stylesheet version=\"1.0\"\
-			                xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\">\
-				<xsl:output method=\"html\"\
-					        encoding=\"utf-8\"/>\
-				<xsl:template match=\"/\">\
-					<xsl:value-of select=\"Content\"/>\
-				</xsl:template>\
-			</xsl:stylesheet>\
-		");
+		Encoded.Append("data:text/xml;charset=utf-8,");
+
+		cdgurl::Encode( Plain, Encoded );
 	}
+
+	const char *AlertBaseXSL_ = "\
+<?xml version = \"1.0\" encoding=\"utf-8\"?>\
+<xsl:stylesheet version=\"1.0\" xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\">\
+	<xsl:output method=\"html\" encoding=\"utf-8\"/>\
+	<xsl:template match=\"/\">\
+		<xsl:value-of select=\"Content\"/>\
+	</xsl:template>\
+</xsl:stylesheet>";
 
 	inline void SetXMLAndXSL_(
 		const ntvstr::string___ &Message,
@@ -213,11 +219,11 @@ namespace {
 		Buffer.Init();
 
 		if ( Language == NULL )
-			SetXML_( Message.UTF8( Buffer ), XML );
+			PutInXML_( Message.UTF8( Buffer ), XML );
 		else
-			SetXML_( Message.UTF8( Buffer ), Language, XML );
+			TanslateAndPutInXML_( Message.UTF8( Buffer ), Language, XML );
 
-		SetXSL_( XSL );
+		EncodeXSL_( str::wString( AlertBaseXSL_ ), XSL );
 	qRR
 	qRT
 	qRE
@@ -259,6 +265,25 @@ qRB
 qRR
 qRT
 qRE
+}
+
+void sclxdhtml::sProxy::Alert(
+	const ntvstr::string___ &XML,
+	const ntvstr::string___ &XSL,
+	const ntvstr::string___ &Title,
+	const char *Language )
+{
+qRH;
+	str::wString EncodedXSL;
+	str::string Buffer;
+qRB;
+	tol::Init( EncodedXSL, Buffer );
+	EncodeXSL_( XSL.UTF8( Buffer ), EncodedXSL );
+
+	Alert_( XML, EncodedXSL, Title, Language );
+qRR;
+qRT;
+qRE;
 }
 
 void sclxdhtml::sProxy::AlertT(
@@ -362,6 +387,32 @@ qRT
 qRE
 }
 
+namespace {
+	eXSLFileHandling GetXSLFileHandlingFromRegistry_( const sclrgstry::dRegistry &Registry )
+	{
+		eXSLFileHandling Result = xfh_Undefined;
+	qRH;
+		str::wString Handling;
+	qRB;
+		Handling.Init();
+
+		if ( !sclrgstry::OGetValue( Registry, registry::definition::XSLFilesHandling, Handling ) )
+			Handling.Append( "Content" );	// Default value.
+
+		if ( Handling == "Content" )
+			Result = xfhContent;
+		else if ( Handling == "Name" )
+			Result = xfhName;
+		else
+			sclrgstry::ReportBadOrNoValueForEntryErrorAndAbort( registry::definition::XSLFilesHandling );
+	qRR;
+	qRT;
+	qRE;
+		return Result;
+	}
+}
+
+
 void sclxdhtml::sProxy::SetLayout_(
 	const xdhdws::nstring___ &Id,
 	const rgstry::rEntry & Filename,
@@ -370,16 +421,38 @@ void sclxdhtml::sProxy::SetLayout_(
 	const str::dString &XML,
 	bso::char__ Marker )
 {
-qRH
-	str::wString XSL;
-qRB
+qRH;
+	str::wString XSL, RawXSL;
+	eXSLFileHandling Handling = XSLFileHandling_;
+qRB;
 	XSL.Init();
-	sclxdhtml::LoadXSLAndTranslateTags( rgstry::tentry___( Filename, Target ), Registry, XSL, Marker );
+
+	if ( Handling == xfhRegistry )
+		Handling = GetXSLFileHandlingFromRegistry_( Registry );
+
+	switch ( Handling ) {
+	case xfhContent:
+		// The content of the XSL file is transmitted (global XDHTML behavior).
+		RawXSL.Init();
+		sclxdhtml::LoadXSLAndTranslateTags( rgstry::tentry___( Filename, Target ), Registry, RawXSL, Marker );
+		XSL.Append( "data:text/xml;charset=utf-8," );
+		cdgurl::Encode( RawXSL, XSL );
+		break;
+	case xfhName:
+		// The _name_ of the XSL file is transmitted (Atlas toolkit behavior).
+		// NOTA: the Atlas toolkit does NOT use this function. It uses a underlying function which have this behavior.
+		XSL.Append( Target );
+		XSL.Append( ".xsl" );
+		break;
+	default:
+		qRFwk();
+		break;
+	}
 
 	Core_.SetLayout( Id, XML, XSL );
-qRR
-qRT
-qRE
+qRR;
+qRT;
+qRE;
 }
 
 void sclxdhtml::sProxy::SetContents(
@@ -577,7 +650,7 @@ void sclxdhtml::sProxy::EnableElement(	const str::dString &Id )
 
 void sclxdhtml::sProxy::DisableElements( const str::dStrings &Ids )
 {
-	HandleElements_( Ids, &xdhdws::sProxy::EnableElements, Core_ );
+	HandleElements_( Ids, &xdhdws::sProxy::DisableElements, Core_ );
 }
 
 void sclxdhtml::sProxy::DisableElement( const str::dString &Id )
@@ -594,9 +667,9 @@ void sclxdhtml::prolog::GetLayout(
 	sclfrntnd::GetProjectsFeatures( Frontend.Language(), Writer );
 }
 
-static sclmisc::project_type__ GetProjectType_( sProxy &Proxy )
+static sclmisc::eProjectType GetProjectType_( sProxy &Proxy )
 {
-	sclmisc::project_type__ ProjectType = sclmisc::pt_Undefined;
+	sclmisc::eProjectType ProjectType = sclmisc::pt_Undefined;
 qRH
 	str::string Value;
 qRB
@@ -606,6 +679,30 @@ qRR
 qRT
 qRE
 	return ProjectType;
+}
+
+void sclxdhtml::prolog::HandleProjectTypeSwitching( sProxy & Proxy )
+{
+	switch ( GetProjectType_( Proxy ) ) {
+	case sclmisc::ptNew:
+		Proxy.AddClass( prolog::RemoteProjectFormId, "hide" );
+		Proxy.AddClass( prolog::PredefinedProjectFormId, "hide" );
+		Proxy.AddClass( prolog::BorderId, "fieldset-vanish" );
+		break;
+	case sclmisc::ptPredefined:
+		Proxy.AddClass( prolog::RemoteProjectFormId, "hide" );
+		Proxy.RemoveClass( prolog::PredefinedProjectFormId, "hide" );
+		Proxy.RemoveClass( prolog::BorderId, "fieldset-vanish" );
+		break;
+	case sclmisc::ptRemote:
+		Proxy.RemoveClass( prolog::RemoteProjectFormId, "hide" );
+		Proxy.AddClass( prolog::PredefinedProjectFormId, "hide" );
+		Proxy.RemoveClass( prolog::BorderId, "fieldset-vanish" );
+		break;
+	default:
+		qRFwk();
+		break;
+	}
 }
 
 void sclxdhtml::prolog::DisplaySelectedProjectFilename(
@@ -635,11 +732,11 @@ qRT
 qRE
 }
 
-sclmisc::project_type__ sclxdhtml::prolog::GetProjectFeatures(
+sclmisc::eProjectType sclxdhtml::prolog::GetProjectFeatures(
 	sProxy &Proxy,
 	str::string_ &Feature )
 {
-	sclmisc::project_type__ Type = sclmisc::pt_Undefined;
+	sclmisc::eProjectType Type = sclmisc::pt_Undefined;
 qRH
 	TOL_CBUFFER___ Buffer;
 qRB
@@ -671,7 +768,7 @@ qRH
 	str::string ProjectFeature;
 qRB
 	ProjectFeature.Init();
-	sclfrntnd::LoadProject( prolog::GetProjectFeatures( Proxy, ProjectFeature ), ProjectFeature );
+	sclfrntnd::LoadProject( prolog::GetProjectFeatures( Proxy, ProjectFeature ), ProjectFeature, Proxy.Info() );
 qRR
 qRT
 qRE
@@ -692,6 +789,7 @@ const char *sclxdhtml::login::GetLabel( eBackendVisibility Visibility )
 	return NULL;	// To avoid a warning.
 }
 
+#undef C
 
 sclfrntnd::eLogin sclxdhtml::login::GetLayout(
 	sclfrntnd::rFrontend &Frontend,
@@ -703,17 +801,162 @@ sclfrntnd::eLogin sclxdhtml::login::GetLayout(
 }
 
 namespace {
-	const str::dString &GetBackendType_(
+	const str::dString &GetType_(
 		sProxy &Proxy,
 		str::dString &Type )
 	{
 		return Proxy.GetValue( login::BackendTypeId, Type );
 	}
+
+	qENUM( BackendType_ )
+	{
+		// Below both types are special backend types.
+		btNone,			// No backend.
+		btPredefined,	// Predefined backend.
+		// Below backend types are plugins.
+		btEmbedded,
+		btStraight,
+		btProxy,
+		bt_amount,
+		bt_Undefined
+	};
+
+	stsfsm::wAutomat TypeAutomat_;
+
+#define C( name )	case bt##name : return #name; break
+
+	const char *GetLabel_( eBackendType_ Type )
+	{
+		switch ( Type ) {
+		case btNone:
+			return sclfrntnd::NoneBackendType;
+			break;
+		case btPredefined:
+			return sclfrntnd::PredefinedBackendType;
+			break;
+		C( Embedded );
+		C( Straight );
+		C( Proxy );
+		default:
+			qRFwk();
+			break;
+		}
+
+		return NULL;	// To avoid a warning.
+	}
+
+#undef C
+
+	void FillTypeAutomat_( void )
+	{
+		TypeAutomat_.Init();
+		stsfsm::Fill<eBackendType_>( TypeAutomat_, bt_amount, GetLabel_ );
+	}
+
+	eBackendType_ GetType_( const str::dString &Pattern )
+	{
+		return stsfsm::GetId( Pattern, TypeAutomat_, bt_Undefined, bt_amount );
+	}
+
+	eBackendType_ GetType_( sProxy &Proxy )
+	{
+		eBackendType_ Type = bt_Undefined;
+	qRH;
+		str::wString Pattern;
+	qRB;
+		Pattern.Init();
+
+		Type = GetType_( GetType_( Proxy, Pattern ) );
+	qRR;
+	qRT;
+	qRE;
+		return Type;
+	}
+
+#define A( name )	Ids.Append( str::wString( login::name##BackendId ) )
+
+	void SetIds_( str::dStrings &Ids )
+	{
+		A( Predefined );
+		A( Remote );
+		A( Proxyfied );
+		A( Embedded );
+	}
+
+#undef A
+
+	void SetClasses_( str::dStrings &Classes )
+	{
+		Classes.Append( str::wString( "hide" ) );
+		Classes.Append( str::wString( "hide" ) );
+		Classes.Append( str::wString( "hide" ) );
+		Classes.Append( str::wString( "hide" ) );
+	}
+
+	void HideAll_( sProxy &Proxy )
+	{
+	qRH;
+		str::wStrings Ids, Classes;
+	qRB;
+		tol::Init( Ids, Classes );
+
+		SetIds_( Ids );
+		SetClasses_( Classes );
+
+		Proxy.AddClasses( Ids, Classes );
+	qRR;
+	qRT;
+	qRE;
+	}
+}
+
+#define S( name )	Proxy.RemoveClass( login::name##BackendId, "hide" )
+
+void sclxdhtml::login::HandleBackendTypeSwitching( sProxy & Proxy )
+{
+	HideAll_( Proxy );
+
+	switch ( GetType_( Proxy ) ) {
+	case btNone:
+		// Nothing to do ; all forms remain hidden.
+		break;
+	case btPredefined:
+		S( Predefined );
+		break;
+	case btEmbedded:
+		S( Embedded );
+		break;
+	case btStraight:
+		S( Remote );
+		break;
+	case btProxy:
+		S( Proxyfied );
+		break;
+	default:
+		qRFwk();
+		break;
+	}
+}
+
+#undef S
+
+namespace {
+	void NormalizeParameters_(
+		str::dString &Parameters,
+		const str::dString DefaultPort )
+	{
+		if ( Parameters.Search( ':' ) == qNIL ) {
+			if ( DefaultPort.Amount() ) {
+				Parameters.Append( ':' );
+				Parameters.Append( DefaultPort );
+			}
+		}
+	}
 }
 
 namespace straight_ {
 	namespace {
-		rgstry::rEntry DefaultPort_("@DefaultStraightPort", sclfrntnd::BackendParametersRegistryEntry );
+		rgstry::rEntry DefaultPort_( "@DefaultStraightPort", sclfrntnd::BackendParametersRegistryEntry );
 	}
 
 	void Normalize( str::dString &Parameters )
@@ -721,13 +964,30 @@ namespace straight_ {
 	qRH
 		str::wString Port;
 	qRB
-		if ( Parameters.Search( ':' ) == qNIL ) {
-			Port.Init();
-			if ( sclmisc::OGetValue( DefaultPort_, Port ) ) {
-				Parameters.Append( ':' );
-				Parameters.Append( Port );
-			}
-		}
+		Port.Init();
+		sclmisc::OGetValue( DefaultPort_, Port );
+
+		NormalizeParameters_( Parameters, Port );
+	qRR
+	qRT
+	qRE
+	}
+}
+
+namespace proxy_ {
+	namespace {
+		rgstry::rEntry DefaultPort_( "@DefaultProxyPort", sclfrntnd::BackendParametersRegistryEntry );
+	}
+
+	void Normalize( str::dString &Parameters )
+	{
+	qRH
+		str::wString Port;
+	qRB
+		Port.Init();
+		sclmisc::OGetValue( DefaultPort_, Port );
+
+		NormalizeParameters_( Parameters, Port );
 	qRR
 	qRT
 	qRE
@@ -738,38 +998,39 @@ void sclxdhtml::login::GetBackendFeatures(
 	sProxy &Proxy,
 	sclfrntnd::rFeatures &Features )
 {
-qRH
+qRH;
+	eBackendType_ Type = bt_Undefined;
 	TOL_CBUFFER___ Buffer;
-	str::string Type, Parameters;
-	const char *BackendId = NULL;
-	bso::sBool NormalizeStraightBackendFeature = false;
-qRB
+	str::string Parameters;
+qRB;
 	Parameters.Init();
-
-	Type.Init();
-	Type = GetBackendType_( Proxy, Type );
-
-	if ( Type != sclfrntnd::NoneBackendType ) {
-		if ( Type == sclfrntnd::PredefinedBackendType )
-			BackendId = PredefinedBackendId;
-		else if ( Type == EmbeddedBackendType_ )
-			BackendId = EmbeddedBackendId;
-		else if ( Type == StraightBackendType_ ) {
-			NormalizeStraightBackendFeature = true;
-			BackendId = StraightBackendId;
-		} else
-			qRGnr();
-
-		Parameters.Append( Proxy.GetValue( BackendId, Buffer ) );
-
-		if ( NormalizeStraightBackendFeature )
-			straight_::Normalize( Parameters );
+	
+	switch ( Type = GetType_( Proxy ) ) {
+	case btNone:
+		break;
+	case btPredefined:
+		Parameters.Append( Proxy.GetValue( PredefinedBackendId, Buffer ) );
+		break;
+	case btEmbedded:
+		Parameters.Append( Proxy.GetValue( EmbeddedBackendId, Buffer ) );
+		break;
+	case btStraight:
+		Parameters.Append( Proxy.GetValue( RemoteBackendId, Buffer ) );
+		straight_::Normalize( Parameters );
+		break;
+	case btProxy:
+		Parameters.Append( Proxy.GetValue( ProxyfiedBackendId, Buffer ) );
+		proxy_::Normalize( Parameters );
+		break;
+	default:
+		qRFwk();
+		break;
 	}
 
-	sclfrntnd::SetBackendFeatures( Type, Parameters, Features );
-qRR
-qRT
-qRE
+	sclfrntnd::SetBackendFeatures( str::wString( GetLabel_( Type ) ), Parameters, Features );
+qRR;
+qRT;
+qRE;
 }
 
 void sclxdhtml::login::DisplaySelectedEmbeddedBackendFilename(
@@ -799,3 +1060,7 @@ qRT
 qRE
 }
 
+qGCTOR( sclxdhtml )
+{
+	FillTypeAutomat_();
+}

@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 1999-2017 Claude SIMON (http://q37.info/contact/).
+	Copyright (C) 1999 Claude SIMON (http://q37.info/contact/).
 
 	This file is part of the Epeios framework.
 
@@ -59,12 +59,25 @@ namespace xdhdws {
 			Callback_ = Callback;
 		}
 		const char *Execute(
-			const nstring___ &Message,
+			const nstring___ &Script,
 			TOL_CBUFFER___ &Buffer )
 		{
-			C_().Process( xdhcmn::fExecute, &Buffer, Message.Internal()() );
+			C_().Process( xdhcmn::fExecute, &Buffer, Script.Internal()() );
 
 			return Buffer;
+		}
+		const str::dString &Execute(
+			const nstring___ &Script,
+			str::dString &Result )
+		{
+		qRH;
+			qCBUFFERr Buffer;
+		qRB;
+			Result.Append( Execute( Script, Buffer ) );
+		qRR;
+		qRT;
+		qRE;
+			return Result;
 		}
 		void Log( const nstring___ &Message )
 		{

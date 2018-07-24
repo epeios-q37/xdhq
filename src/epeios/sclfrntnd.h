@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 1999-2017 Claude SIMON (http://q37.info/contact/).
+	Copyright (C) 1999 Claude SIMON (http://q37.info/contact/).
 
 	This file is part of the Epeios framework.
 
@@ -256,12 +256,7 @@ namespace sclfrntnd {
 		}
 	};
 
-	inline void LoadProject(
-		sclmisc::project_type__ Type,
-		const str::string_ &Feature )
-	{
-		sclmisc::LoadProject( Type, Feature );
-	}
+	using sclmisc::LoadProject;
 
 	void GetProjectsFeatures(
 		const char *Language,
@@ -644,7 +639,7 @@ namespace sclfrntnd {
 
 	eProjectHandling GetProjectHandling( const str::dString &Pattern );
 
-	eProjectHandling HandleProject( void );
+	eProjectHandling HandleProject( const scli::sInfo &Info );
 }
 
 #endif

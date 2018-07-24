@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 1999-2017 Claude SIMON (http://q37.info/contact/).
+	Copyright (C) 1999 Claude SIMON (http://q37.info/contact/).
 
 	This file is part of the Epeios framework.
 
@@ -28,6 +28,8 @@
 
 // SoCLe ARGuMeNTs
 
+# include "scli.h"
+
 # include "err.h"
 # include "txf.h"
 # include "str.h"
@@ -49,7 +51,9 @@ namespace sclargmnt {
 
 	const str::string_ &GetCommand( str::string_ &Command );
 
-	void PrintUsage( txf::text_oflow__ &Flow );
+	void PrintUsage(
+		const scli::sInfo &Info,
+		txf::text_oflow__ &Flow );
 
 	void FillRegistry(
 		const str::strings_ &Arguments,

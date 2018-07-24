@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 1999-2017 Claude SIMON (http://q37.info/contact/).
+	Copyright (C) 1999 Claude SIMON (http://q37.info/contact/).
 
 	This file is part of the Epeios framework.
 
@@ -185,7 +185,7 @@ namespace fdr {
 #ifdef FDR__TS
 			sTID Caller = tht::GetTID();
 
-			if ( _Mutex != mtx::UndefinedHandler ) {
+			if ( _Mutex != mtx::Undefined ) {
 				if ( TryToLock_( _Mutex ) ) {
 					if ( Owner_ != tht::Undefined )
 						qRFwk();
@@ -243,7 +243,7 @@ namespace fdr {
 #ifdef FDR__TS
 			sTID Caller = tht::GetTID();
 
-			if ( _Mutex != mtx::UndefinedHandler ) {
+			if ( _Mutex != mtx::Undefined ) {
 				if ( IsLocked_( _Mutex ) ) {
 					if ( Owner_ != Caller )
 						qRFwk();
@@ -289,15 +289,15 @@ namespace fdr {
 	{
 	private:
 		byte__ *_Cache;
-		size__ _Size;	// Si == '0', signale 'EOF' atteint.
+		size__ _Size;	// If == '0', report EOF.
 		size__ _Available;
 		size__ _Position;
-		size__ Red_;	// Amount of red data since last dismiss.
+		size__ Red_;	// Amount of red data since last dismiss (NOT physically red, but what was returned to user).
 		bso::sBool DismissPending_;
 		bso::sBool AutoDismissOnEOF_;	// If at 'true', 'Dismiss' is automatically called on EOF. Can be useful when the object is reused, i.e. when several 'Init(...)' are called.
 		size__ _Read(
 			size__ Wanted,
-			byte__ *Buffer )	// Si valeur retourne == 0, alors , alors 'EOF' atteint.
+			byte__ *Buffer )	// id returns 0, the EOF reached.
 		{
 			size__ Amount = 0;
 # ifdef FDR_DBG
@@ -485,7 +485,7 @@ namespace fdr {
 		{
 			return GetTID_( FDRITake( Owner ), BaseTake( Owner ) );
 		}
-		void Dismiss( bso::sBool Unlock )
+		void Dismiss( bso::sBool Unlock )	// When 'Unlock' is set to false, the 'Red_' value is NOT set to 0.
 		{
 			if ( DismissPending_ ) {
 				if ( _Cache != NULL ) {
@@ -499,7 +499,8 @@ namespace fdr {
 				qRE
 				}
 
-				Red_ = 0;
+				if ( Unlock )
+					Red_ = 0;
 
 				DismissPending_ = false;
 			}
@@ -595,6 +596,7 @@ namespace fdr {
 	private:
 		bso::bool__ _Initialized;	// Pour viter des 'pure virtual function call'.
 		bso::sBool CommitPending_;
+		size__ Written_;	// Amount of data written since last commit.
 	protected:
 		// Returns amount of written data. Returns '0' only when no other data can be written (deconnection...), otherwise must block.
 		virtual size__ FDRWrite(
@@ -613,6 +615,7 @@ namespace fdr {
 			_Initialized = false;
 			CommitPending_ = false;
 			_flow_driver_base__::reset( P );
+			Written_ = 0;
 		}
 		E_CVDTOR( oflow_driver_base___ );
 		void Init( thread_safety__ ThreadSafety )
@@ -623,10 +626,8 @@ namespace fdr {
 			CommitPending_ = false;
 			_flow_driver_base__::Init( ThreadSafety );
 		}
-		bso::sBool Commit( bso::sBool Unlock )
+		void Commit( bso::sBool Unlock )	// When 'Unlock' is set to false, the 'Written_' value is NOT set to 0.
 		{
-			bso::sBool Success = false;
-
 			if ( CommitPending_ ) {
 				if ( _Initialized ) {
 				qRH
@@ -640,10 +641,10 @@ namespace fdr {
 				}
 
 				CommitPending_ = false;
-			} else
-				Success = true;
 
-			return Success;
+				if ( Unlock )
+					Written_ = 0;
+			}
 		}
 		size__ Write(
 			const byte__ *Buffer,
@@ -651,7 +652,11 @@ namespace fdr {
 		{
 			Lock();
 			CommitPending_ = true;
-			return FDRWrite( Buffer, Maximum );
+			Maximum = FDRWrite( Buffer, Maximum );
+
+			Written_ += Maximum;
+
+			return Maximum;
 		}
 		sTID OTake( sTID Owner )
 		{
@@ -660,6 +665,11 @@ namespace fdr {
 		bso::bool__ OFlowIsLocked( void )	// Simplifie l'utilisation de 'ioflow_driver_...'
 		{
 			return IsLocked();
+		}
+		// Returns amount of data written since last commit.
+		size__ AmountWritten( void ) const
+		{
+			return Written_;
 		}
 	};
 

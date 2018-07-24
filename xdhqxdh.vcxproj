@@ -22,7 +22,7 @@
   <Import Project="Windows.targets"/>
   <Import Project="Details.props"/>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>15b14f65-37fe-4295-9245-e9528cfb3bf3</ProjectGuid>
+    <ProjectGuid>4b0917ac-e41e-41cd-a6d3-e76eb8121329</ProjectGuid>
     <RootNamespace>xdhqxdh</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props"/>
@@ -62,6 +62,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src/xdhqxdh.cpp"/>
+    <ClCompile Include="src/dmopool.cpp"/>
+    <ClCompile Include="src/newlnch.cpp"/>
     <ClCompile Include="src/registry.cpp"/>
     <ClCompile Include="src/prtcl.cpp"/>
     <ClCompile Include="src/epeios/ags.cpp"/>
@@ -131,13 +133,17 @@
     <ClCompile Include="src/epeios/plgn.cpp"/>
     <ClCompile Include="src/epeios/plgncore.cpp"/>
     <ClCompile Include="src/epeios/strmrg.cpp"/>
+    <ClCompile Include="src/epeios/cdgurl.cpp"/>
+    <ClCompile Include="src/epeios/cnvfdr.cpp"/>
     <ClCompile Include="src/epeios/sck.cpp"/>
     <ClCompile Include="src/epeios/csdrcc.cpp"/>
     <ClCompile Include="src/epeios/csdbnc.cpp"/>
+    <ClCompile Include="src/epeios/csdbns.cpp"/>
     <ClCompile Include="src/epeios/csdcmn.cpp"/>
     <ClCompile Include="src/epeios/csdmnc.cpp"/>
     <ClCompile Include="src/epeios/csdmxb.cpp"/>
     <ClCompile Include="src/epeios/csdmxc.cpp"/>
+    <ClCompile Include="src/epeios/csdscb.cpp"/>
     <ClCompile Include="src/epeios/fblcmd.cpp"/>
     <ClCompile Include="src/epeios/fblcst.cpp"/>
     <ClCompile Include="src/epeios/fblfep.cpp"/>
@@ -147,6 +153,7 @@
     <ClCompile Include="src/epeios/fblovl.cpp"/>
     <ClCompile Include="src/epeios/fbltyp.cpp"/>
     <ClCompile Include="src/epeios/sclargmnt.cpp"/>
+    <ClCompile Include="src/epeios/scli.cpp"/>
     <ClCompile Include="src/epeios/sclmisc.cpp"/>
     <ClCompile Include="src/epeios/sclerror.cpp"/>
     <ClCompile Include="src/epeios/scllocale.cpp"/>

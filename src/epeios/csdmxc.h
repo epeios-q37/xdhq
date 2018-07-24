@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 1999-2017 Claude SIMON (http://q37.info/contact/).
+	Copyright (C) 1999 Claude SIMON (http://q37.info/contact/).
 
 	This file is part of the Epeios framework.
 
@@ -373,6 +373,9 @@ qRE
 
 			if ( Created ) {
 				UP_ = C_().Get();
+
+				if ( UP_ == NULL )	// Not able to connect to server.
+					qRFwk();
 			}
 
 			Flow_.Init( Driver_() );
@@ -427,7 +430,6 @@ qRE
 			fdr::size__ Amount = 0;
 		qRH
 		qRB
-
 			if ( Core_ != NULL ) {
 				Prepare_();
 

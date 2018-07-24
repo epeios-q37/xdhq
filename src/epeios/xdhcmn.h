@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 2000-2015 Claude SIMON (http://q37.info/contact/).
+	Copyright (C) 1999 Claude SIMON (http://q37.info/contact/).
 
 	This file is part of the Epeios framework.
 
@@ -80,7 +80,7 @@ namespace xdhcmn {
 		fLog,				// Message,
 		fAlert,				// XML, XSL, Title.
 		fConfirm,			// XML, XSL, Title.
-		fSetLayout,			// Id, XML, XSL.
+		fSetLayout,			// Id, XML, XSL; if XSL is empty, XML is pure HTML.
 		fSetContents,		// Ids, Contents.
 		fDressWidgets,		// Id.
 		fInsertCSSRule,		// Rule, Index.
@@ -186,6 +186,8 @@ namespace xdhcmn {
 		virtual void XDHCMNBaseLanguage( TOL_CBUFFER___ &Buffer ) = 0;
 		virtual cSession *XDHCMNRetrieveCallback(
 			const char *Language,
+			const str::dString &Token,	// If not empty, DEMO mode with connexion identified by 'Token',
+										// otherwise PROD mode, with host/service retrieved from registry.
 			cProxy *Proxy ) = 0;
 		virtual void XDHCMNReleaseCallback( cSession *Session ) = 0;
 	public:
@@ -202,9 +204,11 @@ namespace xdhcmn {
 		}
 		cSession *RetrieveCallback(
 			const char *Language,
+			const str::dString &Token,	// If not empty, DEMO mode with connexion identified by 'Token',
+										// otherwise PROD mode, with host/service retrieved from registry.
 			cProxy *Proxy )
 		{
-			return XDHCMNRetrieveCallback( Language, Proxy );
+			return XDHCMNRetrieveCallback( Language, Token, Proxy );
 		}
 		void ReleaseCallback( cSession *Session )
 		{
@@ -249,6 +253,15 @@ namespace xdhcmn {
 	void FlatSplit(
 		const str::dString &Merged,
 		str::dStrings &Splitted );
+}
+
+/************/
+/**** NEW ****/
+/************/
+
+namespace xdhcmn {
+	typedef digest_ dDigest;
+	qW( Digest )
 }
 
 #endif

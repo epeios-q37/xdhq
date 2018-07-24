@@ -1,5 +1,5 @@
 /*
-Copyright (C) 1999-2017 Claude SIMON (http://q37.info/contact/).
+Copyright (C) 1999 Claude SIMON (http://q37.info/contact/).
 
 This file is part of the Epeios framework.
 
@@ -51,6 +51,7 @@ namespace sclxdhtml {
 		namespace definition {
 			using namespace sclrgstry::definition;
 
+			extern rEntry XSLFilesHandling;
 			extern rEntry XSLFile;
 		}
 	}
@@ -63,16 +64,49 @@ namespace sclxdhtml {
 	protected:
 		virtual void SCLXLaunch(
 			session &Session,
-			const char *Id ) = 0;
+			const char *Id,
+			xdhcmn::eMode Mode ) = 0;
 	public:
 		qCALLBACK( Action );
 		void Launch(
 			session &Session,
-			const char *Id )
+			const char *Id,
+			xdhcmn::eMode Mode )
 		{
-			return SCLXLaunch( Session, Id );
+			return SCLXLaunch( Session, Id, Mode );
 		}
 	};
+
+	// How the XSL file are handled.
+	qENUM( XSLFileHandling ) {
+		xfhName,		// The name of the XSL file is sent (Atlas toolkit behavior).
+		xfhContent,		// The content of the XSL file is sent.
+		xfhRegistry,	// One of above depending of the content of the registry.
+		xfh_amount,
+		xfh_Undefined,
+		xfh_Default = xfhRegistry,
+	};
+
+# define SCLX_ACD( session, name )\
+	extern class s##name\
+	: public sclxdhtml::cAction<session>\
+	{\
+	protected:\
+		virtual void SCLXLaunch(\
+			session &Session,\
+			const char *Id,\
+			xdhcmn::eMode Mode ) override;\
+	public:\
+		static const char *Name;\
+	} name
+
+# define SCLX_AC( session, owner, name )\
+	owner::s##name owner::name;\
+	const char *owner::s##name::Name = #name;\
+	void owner::s##name::SCLXLaunch(\
+		session &Session,\
+		const char *Id,\
+		xdhcmn::eMode Mode )
 
 	E_ROW( crow__ );	// callback row;
 
@@ -131,14 +165,15 @@ namespace sclxdhtml {
 		void Launch(
 			session &Session,
 			const char *Id,
-			const char *Action )
+			const char *Action,
+			xdhcmn::eMode Mode )
 		{
 			cAction<session> *Callback = _Get( str::string( Action ) );
 
 			if ( Callback == NULL )
 				qRFwk();	// An event has no associated action. Check the'.xsl' file.
 
-			return Callback->Launch( Session, Id );
+			return Callback->Launch( Session, Id, Mode );
 		}
 	};
 
@@ -223,6 +258,8 @@ namespace sclxdhtml {
 	{
 	private:
 		xdhdws::sProxy Core_;
+		qRMV( const scli::sInfo, I_, Info_ );
+		eXSLFileHandling XSLFileHandling_;
 		void Alert_(
 			const ntvstr::string___ &XML,
 			const ntvstr::string___ &XSL,
@@ -260,7 +297,7 @@ namespace sclxdhtml {
 			qRH;
 				rack Rack;
 			qRB;
-				Rack.Init( Target, Session );
+				Rack.Init( Target, Session, I_() );
 
 				Get( Session, Rack() );
 
@@ -272,12 +309,50 @@ namespace sclxdhtml {
 	public:
 		void reset( bso::sBool P = true )
 		{
-			tol::reset( P, Core_ );
+			tol::reset( P, Core_, Info_ );
+			XSLFileHandling_ = xfh_Undefined;
 		}
 		qCDTOR( sProxy );
-		void Init( xdhcmn::cProxy *Proxy )
+		void Init( xdhcmn::cProxy *Proxy,
+			const scli::sInfo &Info,
+			eXSLFileHandling XSLFileHandling )
 		{
 			Core_.Init( Proxy );
+			Info_ = &Info;
+			XSLFileHandling_ = XSLFileHandling;
+		}
+		const scli::sInfo &Info( void ) const
+		{
+			return I_();
+		}
+		const char *Execute(
+			const xdhcmn::rNString &Script,
+			qCBUFFERr &Result )
+		{
+			return Core_.Execute( Script, Result );
+		}
+		const str::dString &Execute(
+			const xdhcmn::rNString &Script,
+			str::dString &Result )
+		{
+		qRH;
+			qCBUFFERr Buffer;
+		qRB;
+			Result.Append( Core_.Execute( Script, Buffer ) );
+		qRR;
+		qRT;
+		qRE;
+			return Result;
+		}
+		void Execute( const xdhcmn::rNString &Script )
+		{
+		qRH;
+			qCBUFFERr Dummy;
+		qRB;
+			Execute( Script, Dummy );
+		qRR;
+		qRT;
+		qRE;
 		}
 		void Log( const ntvstr::rString &Message )
 		{
@@ -287,10 +362,7 @@ namespace sclxdhtml {
 			const ntvstr::string___ &XML,
 			const ntvstr::string___ &XSL,
 			const ntvstr::string___ &Title,
-			const char *Language )
-		{
-			Alert_( XML, XSL, Title, Language );
-		}
+			const char *Language );
 		void AlertT(
 			const ntvstr::string___ &RawMessage,
 			const char *Language );	// Translates 'Message'.
@@ -311,6 +383,33 @@ namespace sclxdhtml {
 		bso::bool__ ConfirmU(
 			const ntvstr::string___ &Message,
 			const char *Language );	// Displays 'Message' as is. 'Language' is used for the closing text message.
+		void SetAttribute(
+			const xdhcmn::rNString &Id,
+			const xdhcmn::rNString &Name,
+			const xdhcmn::rNString &Value )
+		{
+			Core_.SetAttribute( Id, Name, Value );
+		}
+		const char *GetAttribute(
+			const xdhcmn::rNString &Id,
+			const xdhcmn::rNString &Name,
+			qCBUFFERr &Value )
+		{
+			return Core_.GetAttribute( Id, Name, Value );
+		}
+		const str::dString &GetAttribute(
+			const xdhcmn::rNString &Id,
+			const xdhcmn::rNString &Name,
+			str::dString &Value )
+		{
+			return Core_.GetAttribute( Id, Name, Value );
+		}
+		void RemoveAttribute(
+			const xdhcmn::rNString &Id,
+			const xdhcmn::rNString &Name )
+		{
+			Core_.RemoveAttribute( Id, Name );
+		}
 		void SetValue(
 			const ntvstr::rString &Id,
 			const ntvstr::rString &Value )
@@ -468,7 +567,8 @@ namespace sclxdhtml {
 		E_CDTOR( rRack );
 		void Init(
 			const char *View,
-			session &Session )
+			session &Session,
+			const scli::sInfo &Info )
 		{
 			tol::buffer__ Buffer;
 			xml::mark__ Mark = XML_UNDEFINED_MARK;
@@ -478,7 +578,7 @@ namespace sclxdhtml {
 			_Writer.Init( _Flow, xml::oIndent, xml::e_Default );
 			_Writer.PushTag( "XDHTML" );
 			_Writer.PutAttribute( "View", View );
-			_Writer.PutAttribute( "Generator", sclmisc::SCLMISCTargetName );
+			_Writer.PutAttribute( "Generator", Info.Target() );
 			_Writer.PutAttribute( "TimeStamp", tol::DateAndTime( Buffer ) );
 			_Writer.PutAttribute( "OS", cpe::GetOSDigest() );
 			Mark = _Writer.PushTag( "Corpus" );
@@ -539,13 +639,15 @@ namespace sclxdhtml {
 			Core_ = NULL;
 		}
 		qCVDTOR( rSession )
-			void Init(
-				sclfrntnd::rKernel &Kernel,
-				const char *Language,
-				xdhcmn::cProxy *Callback,
-				class rCore<rSession> &Core )
+		void Init(
+			sclfrntnd::rKernel &Kernel,
+			const char *Language,
+			xdhcmn::cProxy *Callback,
+			class rCore<rSession> &Core,
+			const scli::sInfo &Info,
+			eXSLFileHandling XSLFileHandling= xfh_Default )
 		{
-			sProxy::Init( Callback );
+			sProxy::Init( Callback, Info, XSLFileHandling );
 			Reporting_.Init( *this, Language );
 			frontend::Init( Kernel, Language, Reporting_ );
 			Page_ = UndefinedPage;
@@ -677,8 +779,9 @@ namespace sclxdhtml {
 	template <typename session> class rCore {
 	private:
 		action_handler<session> _Handler;
-		xdhcmn::eMode _Mode;
+		xdhcmn::eMode Mode_;
 		Q37_MRMDF( cActionHelper<session>, _AH, _ActionHelperCallback );
+		qPMV( const char, ONS_, OnNewSession_ );	// Name of the action to call on new session.
 		bso::bool__ _OnBeforeAction(
 			session &Session,
 			const char *Id,
@@ -698,16 +801,19 @@ namespace sclxdhtml {
 		void reset( bso::bool__ P = true )
 		{
 			_Handler.reset( P );
-			_Mode = xdhcmn::m_Undefined;
+			Mode_ = xdhcmn::m_Undefined;
 			_ActionHelperCallback = NULL;
+			OnNewSession_ = NULL;
 		}
 		E_CVDTOR( rCore )
-			void Init(
-				xdhcmn::eMode Mode,
-				cActionHelper<session> &ActionHelperCallback )
+		template <typename action> void Init(
+			xdhcmn::eMode Mode,
+			const action &OnNewSession,
+			cActionHelper<session> &ActionHelperCallback )
 		{
+			OnNewSession_ = OnNewSession.Name;
 			_ActionHelperCallback = &ActionHelperCallback;
-			_Mode = Mode;
+			Mode_ = Mode;
 			_Handler.Init();
 		}
 		void AddActionCallback(
@@ -722,28 +828,28 @@ namespace sclxdhtml {
 			const char *Action )
 		{
 			bso::bool__ Success = true;
-			qRH
-				TOL_CBUFFER___ Buffer;
-			qRB
-				if ( !strcmp( Action, xdhcmn::RefreshActionLabel ) ) {
-					_OnRefresh( Session );
-				} else if ( _OnBeforeAction( Session, Id, Action ) ) {
-					if ( !strcmp( Action, xdhcmn::CloseActionLabel ) )
-						Success = _OnClose( Session );	// Dans ce cas, si 'Success' est  'false', la fermeture de l'application est suspendue.
-					else
-# if 0
-						Success = _Handler.Launch( Session, Id, Action );
-# else
-						_Handler.Launch( Session, Id, Action );
-# endif
-				}
-				qRR
-					HandleError( Session, Session.Language() );
-				qRT
-					qRE
-					return Success;
+		qRH;
+			TOL_CBUFFER___ Buffer;
+		qRB;
+			if ( Action == NULL ) {
+				Session.SetAttribute( "", "data-xdh-onevents", "(keypress|About|SC+a)(keypress|Q37Refresh|SC+r)" );
+				Action = ONS_();
+			}
+
+			 if ( !strcmp( Action, xdhcmn::RefreshActionLabel ) ) {
+				_OnRefresh( Session );
+			} else if ( _OnBeforeAction( Session, Id, Action ) ) {
+				if ( !strcmp( Action, xdhcmn::CloseActionLabel ) )
+					Success = _OnClose( Session );	// Dans ce cas, si 'Success' est  'false', la fermeture de l'application est suspendue.
+				else
+					_Handler.Launch( Session, Id, Action, Mode_ );
+			}
+		qRR;
+			HandleError( Session, Session.Language() );
+		qRT;
+		qRE;
+			return Success;
 		}
-		E_RODISCLOSE__( xdhcmn::eMode, Mode );
 	};
 
 
@@ -766,29 +872,37 @@ namespace sclxdhtml {
 		Proxy.SetContents( Ids, Contents );
 	}
 
+	const scli::sInfo &SCLXDHTMLInfo( void );	// To define by user.
 	void SCLXDHTMLInitialization( xdhcmn::eMode Mode );	// To define by user.
 
 	xdhcmn::cSession *SCLXDHTMLRetrieveCallback(
 		const char *Language,
 		xdhcmn::eMode Mode,
+		const str::dString &Token,	// If not empty, DEMO mode with connexion identified by 'Token',
+									// otherwise PROD mode, with host/service retrieved from registry.
 		xdhcmn::cProxy *ProxyCallback );	// To define by user.
 
 	void SCLXDHTMLReleaseCallback( xdhcmn::cSession *Callback );	// To define by user.
 
 	namespace prolog {
+		static E_CDEF( char *, BorderId, "Border" );
 		static E_CDEF( char *, ProjectTypeId, "ProjectType" );
+		static E_CDEF( char *, PredefinedProjectFormId, "PredefinedProjectForm" );
 		static E_CDEF( char *, PredefinedProjectId, "PredefinedProject" );
+		static E_CDEF( char *, RemoteProjectFormId, "RemoteProjectForm" );
 		static E_CDEF( char *, RemoteProjectId, "RemoteProject" );
 
 		void GetLayout(
 			sclfrntnd::rFrontend &Frontend,
 			xml::writer_ &Writer );
 
+		void HandleProjectTypeSwitching( sProxy &Proxy );
+
 		void DisplaySelectedProjectFilename(
 			sProxy &Proxy,
 			const char *Id );
 
-		sclmisc::project_type__ GetProjectFeatures(
+		sclmisc::eProjectType GetProjectFeatures(
 			sProxy &Proxy,
 			str::string_ &Feature );
 
@@ -797,15 +911,19 @@ namespace sclxdhtml {
 
 	namespace login {
 		static E_CDEF( char *, BackendTypeId, "BackendType" );
-		static E_CDEF( char *, StraightBackendId, "StraightBackend" );
-		static E_CDEF( char *, EmbeddedBackendId, "EmbeddedBackend" );
+		// Ids of the forms for the parameters of the different backend types.
 		static E_CDEF( char *, PredefinedBackendId, "PredefinedBackend" );
-
+		static E_CDEF( char *, RemoteBackendId, "RemoteBackend" );
+		static E_CDEF( char *, ProxyfiedBackendId, "ProxyfiedBackend" );
+		static E_CDEF( char *, EmbeddedBackendId, "EmbeddedBackend" );
+		
 		const char *GetLabel( eBackendVisibility );
 
 		sclfrntnd::eLogin GetLayout(
 			sclfrntnd::rFrontend &Frontend,
 			xml::writer_ &Writer );
+
+		void HandleBackendTypeSwitching( sProxy &Proxy );
 
 		void GetBackendFeatures(
 			sProxy &Proxy,

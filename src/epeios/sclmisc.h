@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 1999-2017 Claude SIMON (http://q37.info/contact/).
+	Copyright (C) 1999 Claude SIMON (http://q37.info/contact/).
 
 	This file is part of the Epeios framework.
 
@@ -15,7 +15,7 @@
 
 	You should have received a copy of the GNU Affero General Public License
 	along with the Epeios framework.  If not, see <http://www.gnu.org/licenses/>
-	*/
+*/
 
 // SoCLe MISCellaneous
 
@@ -34,6 +34,7 @@
 # include "rgstry.h"
 # include "scllocale.h"
 # include "sclerror.h"
+# include "scli.h"
 # include "sclrgstry.h"
 
 # include "plgn.h"
@@ -43,10 +44,6 @@
 /***************/
 
 namespace sclmisc {
-	// Three below items MUST be defined by user.
-	extern const char *SCLMISCTargetName;
-	extern const char *SCLMISCProductName;
-	extern const char *SCLMISCOrganizationName;
 
 	bso::bool__ IsInitialized( void );
 
@@ -209,37 +206,34 @@ namespace sclmisc {
 		const char *LocaleDirectory,
 		xtf::extended_text_iflow__ &RegistryFlow,
 		const char *RegistryDirectory,
-		const fnm::name___ &BinPath );
+		const fnm::name___ &BinPath,
+		const scli::sInfo &Info );
 
 	void Initialize(
 		const sRack &Rack,
 		const fnm::name___ &BinPath,
+		const scli::sInfo &Info,
 		qRPD );
 
-	// Counter-part of 'Initalize'.
-	void Quit( void );
+	// Counter-part of 'Initialize'.
+	void Quit( const scli::sInfo &Info );
 
-	// Store the content of the 'lastign' registry level as application data.
-	void StoreLastingRegistry( void );
+	// Store the content of the 'lasting' registry level as application data.
+	void StoreLastingRegistry( const scli::sInfo &Info );
 
 	// Deletes the file which contains the lasting registry.
 	void DumpLastingRegistryFile(
 		txf::sWFlow &Flow,
-		const char *Target = SCLMISCTargetName,
-		const char *Product = SCLMISCProductName,
-		const char *Organization = SCLMISCOrganizationName );
+		const scli::sInfo &Info );
 
 	// Deletes the file which contains the lasting registry.
-	void DeleteLastingRegistryFile(
-		const char *Target = SCLMISCTargetName,
-		const char *Product = SCLMISCProductName,
-		const char *Organization = SCLMISCOrganizationName );
+	void DeleteLastingRegistryFile( const scli::sInfo &Info );
 
 	void DumpRegistriesAndOrLocalesIfRequired( void );
 
 	void EraseProjectRegistry( void );
 
-	enum project_type__ {
+	qENUM( ProjectType ) {
 		ptNew,			// Empty project.
 		ptPredefined,	// Use of a project defined in the 'Definitions' section in the configuration file.
 		ptRemote,		// Project stored in a file.
@@ -248,24 +242,27 @@ namespace sclmisc {
 		pt_Undefined
 	};
 
-	const char *GetLabel( project_type__ ProjectType );
+	const char *GetLabel( eProjectType ProjectType );
 
-	project_type__ GetProjectType( const str::string_ &Pattern );
+	eProjectType GetProjectType( const str::string_ &Pattern );
 
 	void LoadProject(
 		flw::iflow__ &Flow,
 		const fnm::name___ &Directory,
+		const scli::sInfo &Info,
 		str::string_ &Id );
 
 	void LoadProject(
 		const fnm::name___ &FileName,
+		const scli::sInfo &Info,
 		str::string_ &Id );
 
 	void LoadProject(
-		project_type__ ProjectType,
-		const str::string_ &ProjectFeature );
+		eProjectType ProjectType,
+		const str::string_ &ProjectFeature,
+		const scli::sInfo &Info );
 
-	void LoadProject( void );	// Load project, if applies, following configuration file indications.
+	void LoadProject( const scli::sInfo &Info );	// Load project, if applies, following configuration file indications.
 
 	using fil::GetBackupFilename;
 

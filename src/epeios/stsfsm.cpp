@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 1999-2017 Claude SIMON (http://q37.info/contact/).
+	Copyright (C) 1999 Claude SIMON (http://q37.info/contact/).
 
 	This file is part of the Epeios framework.
 
@@ -139,6 +139,7 @@ qRB
 		switch ( Parser.Handle( Byte ) ) {
 		case sLost:
 			Continue = false;
+			Match = false;
 			break;
 		case sMatch:
 			Match = true;

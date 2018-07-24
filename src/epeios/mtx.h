@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 1999-2017 Claude SIMON (http://q37.info/contact/).
+	Copyright (C) 1999 Claude SIMON (http://q37.info/contact/).
 
 	This file is part of the Epeios framework.
 
@@ -374,7 +374,7 @@ namespace mtx {
 		}
 	} *handler___;
 
-	E_CDEF( handler___, UndefinedHandler, NULL );
+	E_CDEF( handler___, Undefined, NULL );
 
 	//f Return a new mutex handler.
 	inline handler___ Create( bso::bool__ Disabled = false )	// Si True, utilisation dans un contexte mono-thread.

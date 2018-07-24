@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 1999-2017 Claude SIMON (http://q37.info/contact/).
+	Copyright (C) 1999 Claude SIMON (http://q37.info/contact/).
 
 	This file is part of the Epeios framework.
 
@@ -715,9 +715,9 @@ eProjectHandling sclfrntnd::GetProjectHandling( const str::dString &Pattern )
 	return stsfsm::GetId( Pattern, ProjectHandlingAutomat_, ph_Undefined, ph_amount );
 }
 
-eProjectHandling sclfrntnd::HandleProject( void )
+eProjectHandling sclfrntnd::HandleProject( const scli::sInfo &Info )
 {
-	eProjectHandling Handling = phNone;;
+	eProjectHandling Handling = phNone;
 qRH
 	str::wString RawHandling;
 qRB
@@ -734,7 +734,7 @@ qRB
 		case phLoad:
 		case phRun:
 		case phLogin:
-			sclmisc::LoadProject();
+			sclmisc::LoadProject( Info );
 			break;
 		default:
 			qRGnr();

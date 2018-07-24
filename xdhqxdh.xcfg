@@ -5,6 +5,7 @@
    <Language>en</Language>
    <Command>Test</Command>
    <HostService>localhost:53752</HostService>
+   <DemoService>53800</DemoService>
   </Parameters>
   <Definitions/>
   <Locale>

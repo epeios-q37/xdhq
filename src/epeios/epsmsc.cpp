@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 1999-2017 Claude SIMON (http://q37.info/contact/).
+	Copyright (C) 1999 Claude SIMON (http://q37.info/contact/).
 
 	This file is part of the Epeios framework.
 
@@ -45,6 +45,3 @@ void epsmsc::PrintLicense(
 	<< pad << "General Public License along with " << Name << ". If not," << nl
 	<< pad << "see <http://www.gnu.org/licenses/>" << nl;
 }
-
-const char *sclmisc::SCLMISCOrganizationName = "q37.info";
-

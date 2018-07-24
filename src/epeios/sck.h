@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 1999-2017 Claude SIMON (http://q37.info/contact/).
+	Copyright (C) 1999 Claude SIMON (http://q37.info/contact/).
 
 	This file is part of the Epeios framework.
 
@@ -406,7 +406,7 @@ namespace sck {
 
 	qCDEF( sSocket, Undefined, SCK_INVALID_SOCKET );
 
-	typedef socket_ioflow_driver___ rRWFlowDriver;
+	typedef socket_ioflow_driver___ rRWDriver;
 	typedef socket_ioflow___ rRWFlow;
 }
 #endif
