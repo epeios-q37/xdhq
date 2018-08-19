@@ -31,61 +31,8 @@
 
 namespace prtcl {
 	static qCDEF( char *, ProtocolId, "712a58bf-2c9a-47b2-ba5e-d359a99966de" );
+	static qCDEF( char *, StandBy, "StandBy_1" );	// Send as command to report that there is no more command to handle.
 	qCDEF( bso::sU8, ProtocolVersion, 0 );
-
-	qENUM( Request ) {
-		rLaunch_1,	// Event was launched.
-		rReady_1,	// Potential pending data are available, and client is available for new action.
-		r_amount,
-		r_Undefined
-	};
-
-	const char *GetLabel( eRequest Request );
-
-	eRequest GetRequest( const str::dString &Pattern );
-
-	eRequest GetRequest( flw::iflow__ &Flow );
-
-	void PutRequest(
-		eRequest Request,
-		flw::oflow__ &Flow );
-
-	qENUM( Command )
-	{
-		cStandBy_1,
-		cError_1,
-		cExecute_1,
-		cAlert_1,
-		cConfirm_1,
-		cSetLayout_1,
-		cGetContents_1,
-		cSetContents_1,
-		cDressWidgets_1,
-		cAddClasses_1,
-		cRemoveClasses_1,
-		cToggleClasses_1,
-		cEnableElements_1,
-		cDisableElements_1,
-		cSetAttribute_1,
-		cGetAttribute_1,
-		cRemoveAttribute_1,
-		cSetProperty_1,
-		cGetProperty_1,
-		cFocus_1,
-		cNew,	// Will replace all above commands, except the 2 first ones.
-		c_amount,
-		c_Undefined
-	};
-
-	const char *GetLabel( eCommand Command );
-
-	eCommand GetCommand( const str::dString &Pattern );
-
-	eCommand GetCommand( flw::iflow__ &Flow );
-
-	void SendCommand(
-		eCommand Command,
-		flw::oflow__ &Flow );
 
 	using csdcmn::Put;
 	using csdcmn::Get;
