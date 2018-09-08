@@ -181,6 +181,8 @@ sck::sSocket dmopool::GetConnexion( const str::dString &Token )
 qRH;
 	mtx::rMutex Mutex;
 	sRow Row = qNIL;
+	bso::u8__ Counter = 100;	// Combined with the 'Suspend(...)' below,
+								// this give ten second to the app to respond.
 qRB;
 	Mutex.Init( Handler_ );
 	Mutex.Lock();
@@ -193,7 +195,10 @@ qRB;
 	while ( !Sockets_( Row ).Amount() ) {
 		Mutex.Unlock();
 
-		tht::Defer();
+		if ( !--Counter )
+			qRGnr();
+
+		tht::Suspend( 100 );
 
 		Mutex.Lock();
 	}
