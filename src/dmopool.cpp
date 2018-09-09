@@ -35,15 +35,53 @@ using namespace dmopool;
 
 
 namespace {
-	mtx::rHandler Handler_ = mtx::Undefined;
+
+	class rConnections_
+	{
+	private:
+		void Close_( void )
+		{
+			sdr::sRow Row = Sockets.First();
+
+			while ( Row != qNIL ) {
+				sck::Close( Sockets( Row ) );
+
+				Row = Sockets.Next( Row );
+			}
+		}
+	public:
+		bch::qBUNCHwl( sck::sSocket ) Sockets;
+		mtx::rHandler MutexHandler = mtx::Undefined;
+		void reset( bso::sBool P = true )
+		{
+			if ( P ) {
+				if ( MutexHandler != mtx::Undefined )
+					mtx::Delete( MutexHandler );
+				Close_();
+			}
+
+			MutexHandler = mtx::Undefined;
+			tol::reset( P, Sockets );
+		}
+		qCDTOR( rConnections_ );
+		void Init( void )
+		{
+			reset();
+
+			MutexHandler = mtx::Create();
+			Sockets.Init();
+		}
+	};
+
+	mtx::rHandler MutexHandler_ = mtx::Undefined;
 	qROW( Row );
 	crt::qMCRATEw( str::dString, sRow ) Tokens_;
-	crt::qMCRATEw( bch::qBUNCHdl( sck::sSocket ), sRow ) Sockets_;
+	bch::qBUNCHw( rConnections_ *, sRow ) Clients_;
 	csdbns::rListener Listener_;
 
-	sRow Search_( const str::dString &Token )
+	rConnections_ *TUSearch_( const str::dString &Token )
 	{
-		if ( !mtx::IsLocked( Handler_ ) )
+		if ( !mtx::IsLocked( MutexHandler_ ) )
 			qRGnr();
 
 		sRow Row = Tokens_.First();
@@ -51,31 +89,54 @@ namespace {
 		while ( ( Row != qNIL ) && (Tokens_( Row ) != Token) )
 			Row = Tokens_.Next( Row );
 
-		return Row;
+		if ( Row != qNIL )
+			return Clients_( Row );
+		else
+			return NULL;
 	}
 
-	sRow Create_( const str::dString &Token )
+	rConnections_ *TSSearch_( const str::dString &Token )
 	{
-		sRow Row = qNIL;
+		rConnections_ *Connections = NULL;
 	qRH;
 		mtx::rMutex Mutex;
 	qRB;
-		Mutex.Init( Handler_) ;
-		Mutex.Lock();
+		Mutex.InitAndLock( MutexHandler_ );
 
-		if ( Search_( Token ) != qNIL )
+		Connections = TUSearch_( Token );
+	qRR;
+	qRT;
+	qRE;
+		return Connections;
+	}
+
+	rConnections_ *Create_( const str::dString &Token )
+	{
+		rConnections_*Connections = NULL;
+	qRH;
+		mtx::rMutex Mutex;
+		sRow Row = qNIL;
+	qRB;
+		Mutex.InitAndLock( MutexHandler_) ;
+
+		if ( TUSearch_( Token ) != NULL )
 			qRGnr();
 
 		Row = Tokens_.Append( Token );
 
-		if ( Sockets_.New() != Row )
-			qRGnr();
+		if ( (Connections = new rConnections_) == NULL )
+			qRAlc();
 
-		Sockets_( Row ).Init();
+		Connections->Init();
+
+		if ( Clients_.Append( Connections ) != Row )
+			qRGnr();
 	qRR;
+		if ( Connections != NULL )
+			delete Connections;
 	qRT;
 	qRE;
-		return Row;
+		return Connections;
 	}
 
 	void Get_(
@@ -101,7 +162,7 @@ namespace {
 		str::wString Token;
 		sck::rRWFlow Flow;
 		tol::bUUID UUID;
-		sRow Row = qNIL;
+		rConnections_ *Connections = NULL;
 		mtx::rMutex Mutex;
 	qRFB;
 		Blocker.Release();
@@ -111,26 +172,20 @@ namespace {
 		Token.Init();
 		Get_( Flow, Token );
 
-		Mutex.Init( Handler_ );
-
 		if ( Token.Amount() == 0 ) {
 			Token.Append( tol::UUIDGen( UUID ) );
 
-			Row = Create_( Token );
+			Connections = Create_( Token );
 		} else {
-			Mutex.Lock();
-
-			Row = Search_( Token );
-
-			Mutex.Unlock();
+			Connections = TSSearch_( Token );
 		}
 
-		if ( Row == qNIL )
+		if ( Connections == NULL )
 			Token.Init();
 		else {
-			Mutex.Lock();
+			Mutex.InitAndLock( Connections->MutexHandler );
 
-			Sockets_( Row ).Push( Socket );
+			Connections->Sockets.Push( Socket );
 
 			Mutex.Unlock();
 		}
@@ -175,24 +230,23 @@ qRT;
 qRE;
 }
 
-sck::sSocket dmopool::GetConnexion( const str::dString &Token )
+sck::sSocket dmopool::GetConnection( const str::dString &Token )
 {
 	sck::sSocket Socket = sck::Undefined;
 qRH;
 	mtx::rMutex Mutex;
-	sRow Row = qNIL;
+	rConnections_ *Connections = NULL;
 	bso::u8__ Counter = 100;	// Combined with the 'Suspend(...)' below,
-								// this give ten second to the app to respond.
+								// this give ten seconds to the client to respond.
 qRB;
-	Mutex.Init( Handler_ );
-	Mutex.Lock();
+	Connections = TSSearch_( Token );
 
-	Row = Search_( Token );
-
-	if ( Row == qNIL )
+	if ( Connections == NULL )
 		qRGnr();
 
-	while ( !Sockets_( Row ).Amount() ) {
+	Mutex.InitAndLock( Connections->MutexHandler );
+
+	while ( !Connections->Sockets.Amount() ) {
 		Mutex.Unlock();
 
 		if ( !--Counter )
@@ -203,7 +257,7 @@ qRB;
 		Mutex.Lock();
 	}
 
-	Socket = Sockets_( Row ).Pop();
+	Socket = Connections->Sockets.Pop();
 qRR;
 qRT;
 qRE;
@@ -212,14 +266,22 @@ qRE;
 
 qGCTOR( dmopool )
 {
-	Handler_ = mtx::Create();
+	MutexHandler_ = mtx::Create();
 	Tokens_.Init();
-	Sockets_.Init();
+	Clients_.Init();
 }
 
 qGDTOR( dmopool )
 {
-	if ( Handler_ != mtx::Undefined )
-		mtx::Delete( Handler_, true );
+	if ( MutexHandler_ != mtx::Undefined )
+		mtx::Delete( MutexHandler_, true );
+
+	sRow Row = Clients_.First();
+
+	while ( Row != qNIL ) {
+		delete Clients_( Row );
+
+		Row = Clients_.Next( Row );
+	}
 }
 
