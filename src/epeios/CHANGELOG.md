@@ -9,6 +9,8 @@
 
 - MTX:
   - adding `rMutex::InitAndLock(...)`,
+- THT :
+  - adding timeout handlig to `rReadWrite`.
 
 ## 2018-08-16
 

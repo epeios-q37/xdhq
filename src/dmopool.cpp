@@ -35,41 +35,30 @@ using namespace dmopool;
 
 
 namespace {
-
 	class rConnections_
 	{
-	private:
-		void Close_( void )
-		{
-			sdr::sRow Row = Sockets.First();
-
-			while ( Row != qNIL ) {
-				sck::Close( Sockets( Row ) );
-
-				Row = Sockets.Next( Row );
-			}
-		}
 	public:
-		bch::qBUNCHwl( sck::sSocket ) Sockets;
-		mtx::rHandler MutexHandler = mtx::Undefined;
+		sck::sSocket Socket;
+		tht::rReadWrite Access;
+		bso::sBool GiveUp;
 		void reset( bso::sBool P = true )
 		{
 			if ( P ) {
-				if ( MutexHandler != mtx::Undefined )
-					mtx::Delete( MutexHandler );
-				Close_();
+				if ( Socket != sck::Undefined )
+					sck::Close( Socket );
 			}
 
-			MutexHandler = mtx::Undefined;
-			tol::reset( P, Sockets );
+			Socket = sck::Undefined;
+			Access.reset( P );
+			GiveUp = false;	// If at 'true', the client is deemed to be disconnected.
 		}
 		qCDTOR( rConnections_ );
 		void Init( void )
 		{
 			reset();
 
-			MutexHandler = mtx::Create();
-			Sockets.Init();
+			Access.Init();
+			GiveUp = false;
 		}
 	};
 
@@ -183,11 +172,9 @@ namespace {
 		if ( Connections == NULL )
 			Token.Init();
 		else {
-			Mutex.InitAndLock( Connections->MutexHandler );
-
-			Connections->Sockets.Push( Socket );
-
-			Mutex.Unlock();
+			Connections->Access.WriteBegin();
+			Connections->Socket = Socket;
+			Connections->Access.WriteEnd();
 		}
 
 		Put_( Token, Flow );
@@ -233,34 +220,26 @@ qRE;
 sck::sSocket dmopool::GetConnection( const str::dString &Token )
 {
 	sck::sSocket Socket = sck::Undefined;
-qRH;
-	mtx::rMutex Mutex;
-	rConnections_ *Connections = NULL;
-	bso::u8__ Counter = 100;	// Combined with the 'Suspend(...)' below,
-								// this give ten seconds to the client to respond.
-qRB;
-	Connections = TSSearch_( Token );
+	rConnections_ *Connections = TSSearch_( Token );
 
 	if ( Connections == NULL )
 		qRGnr();
 
-	Mutex.InitAndLock( Connections->MutexHandler );
-
-	while ( !Connections->Sockets.Amount() ) {
-		Mutex.Unlock();
-
-		if ( !--Counter )
-			qRGnr();
-
-		tht::Suspend( 100 );
-
-		Mutex.Lock();
+	if ( !Connections->Access.ReadBegin( 1000 ) ) {	// Give 1 second to the client to respond.
+		Connections->GiveUp = true;				// No available connections within 1 second, tells other to give up.
+		Connections->Access.WriteDismiss();		// The 'ReadBegin()' from another thread will now succeed.
+		qRGnr();
 	}
 
-	Socket = Connections->Sockets.Pop();
-qRR;
-qRT;
-qRE;
+	if ( Connections->GiveUp ) {	// 'ReadBegin()' succeeded, but we have were instructed to give up.
+		Connections->Access.ReadEnd();	// For the following 'WriteDismiss()' to succeed.
+		Connections->Access.WriteDismiss();		// The 'ReadBegin()' from another thread will now succeed.
+		qRGnr();
+	}
+
+	Socket = Connections->Socket;
+	Connections->Access.ReadEnd();
+
 	return Socket;
 }
 
