@@ -41,6 +41,9 @@ along with the Epeios framework.  If not, see <http://www.gnu.org/licenses/>
 # define SCLXDHTML_DEFAULT_SUFFIX "xdh"
 
 namespace sclxdhtml {
+
+	qCDEF( char, DefaultMarker, '#' );
+
 	namespace registry {
 		using rgstry::rEntry;
 
@@ -51,14 +54,19 @@ namespace sclxdhtml {
 		namespace definition {
 			using namespace sclrgstry::definition;
 
-			extern rEntry XSLFilesHandling;
-			extern rEntry XSLFile;
+			extern rEntry XMLFilesHandling;
+			extern rEntry XSLFile;	// To style XML data tagged). 
+			extern rEntry HeadFile;	// For the head section of the HTML main page. One page only.
 		}
 	}
 
 	const sclrgstry::registry_ &GetRegistry( void );
 
 	const char *GetLauncher( void );
+
+	typedef void( *fHead )(void *UP, str::dString &Head);
+
+	void SetHeadFunction( fHead HeadFunction );
 
 	template <typename session> class cAction {
 	protected:
@@ -281,7 +289,7 @@ namespace sclxdhtml {
 	protected:
 		void SetLayout_(
 			const xdhdws::nstring___ &Id,
-			const rgstry::rEntry &Filename,
+			const rgstry::rEntry &XSLFilename,
 			const char *Target,
 			const sclrgstry::registry_ &Registry,
 			const str::dString &XML,
@@ -290,22 +298,22 @@ namespace sclxdhtml {
 			const xdhdws::nstring___ &Id,
 			const char *Target,
 			const sclrgstry::registry_ &Registry,
-			void( *Get )(session &Session, xml::dWriter &Writer),
+			void( *Get )(session &Session, xml::rWriter &Writer),
 			session &Session,
-			bso::char__ Marker = '#' )
-			{
-			qRH;
-				rack Rack;
-			qRB;
-				Rack.Init( Target, Session, I_() );
+			bso::char__ Marker = DefaultMarker )
+		{
+		qRH;
+			rack Rack;
+		qRB;
+			Rack.Init( Target, Session, I_() );
 
-				Get( Session, Rack() );
+			Get( Session, Rack() );
 
-				SetLayout_( Id, registry::definition::XSLFile, Target, Registry, Rack.Target(), Marker );
-			qRR;
-			qRT;
-			qRE;
-			}
+			SetLayout_( Id, registry::definition::XSLFile, Target, Registry, Rack.Target(), Marker );
+		qRR;
+		qRT;
+		qRE;
+		}
 	public:
 		void reset( bso::sBool P = true )
 		{
@@ -313,11 +321,11 @@ namespace sclxdhtml {
 			XSLFileHandling_ = xfh_Undefined;
 		}
 		qCDTOR( sProxy );
-		void Init( xdhcmn::cProxy *Proxy,
+		void Init( xdhcmn::cUpstream *Upstream,
 			const scli::sInfo &Info,
 			eXSLFileHandling XSLFileHandling )
 		{
-			Core_.Init( Proxy );
+			Core_.Init( Upstream );
 			Info_ = &Info;
 			XSLFileHandling_ = XSLFileHandling;
 		}
@@ -358,6 +366,8 @@ namespace sclxdhtml {
 		{
 			Core_.Log( Message );
 		}
+		// The basic alert, without use of 'JQuery' based widget.
+		void AlertB( const ntvstr::string___ & Message );
 		void Alert(
 			const ntvstr::string___ &XML,
 			const ntvstr::string___ &XSL,
@@ -558,7 +568,7 @@ namespace sclxdhtml {
 	private:
 		str::wString Target_;
 		mutable flx::E_STRING_TOFLOW___ _Flow;
-		xml::writer _Writer;
+		xml::rWriter _Writer;
 	public:
 		void reset( bso::bool__ P = true )
 		{
@@ -571,7 +581,7 @@ namespace sclxdhtml {
 			const scli::sInfo &Info )
 		{
 			tol::buffer__ Buffer;
-			xml::mark__ Mark = XML_UNDEFINED_MARK;
+			xml::sMark Mark = xml::Undefined;
 
 			Target_.Init();
 			_Flow.Init( Target_ );
@@ -587,11 +597,11 @@ namespace sclxdhtml {
 			_Writer.PushTag( "Layout" );
 			dump::Common( Session, _Writer );
 		}
-		operator xml::writer_ &()
+		operator xml::rWriter &()
 		{
 			return _Writer;
 		}
-		xml::writer_ &operator()( void )
+		xml::rWriter &operator()( void )
 		{
 			return _Writer;
 		}
@@ -605,8 +615,6 @@ namespace sclxdhtml {
 	};
 
 	template <typename session> class rCore;
-
-	extern const char *RootTagId_;
 
 	// User put in 'instances' all his own objects, instantiating all with a 'new' (by overloading 'SCLXHTMLNew(...)'), a 'delete' will be made automatically when unloading the library.
 	template <typename instances, typename frontend, typename page, page UndefinedPage, typename dump> class rSession
@@ -642,7 +650,7 @@ namespace sclxdhtml {
 		void Init(
 			sclfrntnd::rKernel &Kernel,
 			const char *Language,
-			xdhcmn::cProxy *Callback,
+			xdhcmn::cUpstream *Callback,
 			class rCore<rSession> &Core,
 			const scli::sInfo &Info,
 			eXSLFileHandling XSLFileHandling= xfh_Default )
@@ -690,6 +698,10 @@ namespace sclxdhtml {
 		{
 			return scllocale::GetTranslation( Message, Language(), Translation );
 		}
+		bso::sBool GetHead( str::dString &Content )
+		{
+			return GetHead_( frontend::Registry(), Content, DefaultMarker );
+		}
 		void AlertU( const ntvstr::string___ &Message )	// Displays 'Message' as is.
 		{
 			sProxy::AlertU( Message, Language() );
@@ -731,7 +743,7 @@ namespace sclxdhtml {
 		void SetElementLayout(
 			const xdhdws::nstring___ &Id,
 			const char *Target,
-			void( *Get )( rSession &Session, xml::dWriter &Writer ),
+			void( *Get )( rSession &Session, xml::rWriter &Writer ),
 			const sclrgstry::dRegistry &Registry )
 		{
 			sProxy::SetLayout_<rSession, rRack<rSession,dump>>( Id, Target, Registry, Get, *this );
@@ -739,20 +751,21 @@ namespace sclxdhtml {
 		void SetElementLayout(
 			const xdhdws::nstring___ &Id,
 			const char *Target,
-			void( *Get )( rSession &Session, xml::dWriter &Writer ) )
+			void( *Get )( rSession &Session, xml::rWriter &Writer ) )
 		{
 			SetElementLayout( Id, Target, Get, frontend::Registry() );
 		}
 		inline void SetDocumentLayout(
 			const char *Target,
-			void( *Get )( rSession &Session, xml::dWriter &Writer ),
+			void( *Get )( rSession &Session, xml::rWriter &Writer ),
 			const sclrgstry::dRegistry &Registry )
 		{
-			SetElementLayout( RootTagId_, Target, Get, Registry );
+//			sProxy::HeadUp_( frontend::Registry(), DefaultMarker );
+			SetElementLayout( "", Target, Get, Registry );
 		}
 		void SetDocumentLayout(
 			const char *Target,
-			void( *Get )( rSession &Session, xml::dWriter &Writer ) )
+			void( *Get )( rSession &Session, xml::rWriter &Writer ) )
 		{
 			SetDocumentLayout( Target, Get, frontend::Registry() );
 		}
@@ -831,7 +844,7 @@ namespace sclxdhtml {
 		qRH;
 			TOL_CBUFFER___ Buffer;
 		qRB;
-			if ( Action == NULL ) {
+			if ( ( Action == NULL ) || ( *Action == 0 ) ) {
 				Session.SetAttribute( "", "data-xdh-onevents", "(keypress|About|SC+a)(keypress|Q37Refresh|SC+r)" );
 				Action = ONS_();
 			}
@@ -858,10 +871,10 @@ namespace sclxdhtml {
 	inline void LoadXSLAndTranslateTags(
 		const rgstry::tentry__ &FileName,
 		const sclrgstry::registry_ &Registry,
-		str::string_ &String,
-		bso::char__ Marker = '#' )
+		str::string_ &Content,
+		bso::char__ Marker = DefaultMarker )
 	{
-		sclmisc::LoadXMLAndTranslateTags( FileName, Registry, String, Marker );
+		return sclmisc::LoadXMLAndTranslateTags( FileName, Registry, Content, 0, Marker );
 	}
 
 	inline void SetContents_(
@@ -880,7 +893,7 @@ namespace sclxdhtml {
 		xdhcmn::eMode Mode,
 		const str::dString &Token,	// If not empty, DEMO mode with connexion identified by 'Token',
 									// otherwise PROD mode, with host/service retrieved from registry.
-		xdhcmn::cProxy *ProxyCallback );	// To define by user.
+		xdhcmn::cUpstream *UpstreamCallback );	// To define by user.
 
 	void SCLXDHTMLReleaseCallback( xdhcmn::cSession *Callback );	// To define by user.
 
@@ -894,7 +907,7 @@ namespace sclxdhtml {
 
 		void GetLayout(
 			sclfrntnd::rFrontend &Frontend,
-			xml::writer_ &Writer );
+			xml::rWriter &Writer );
 
 		void HandleProjectTypeSwitching( sProxy &Proxy );
 
@@ -921,7 +934,7 @@ namespace sclxdhtml {
 
 		sclfrntnd::eLogin GetLayout(
 			sclfrntnd::rFrontend &Frontend,
-			xml::writer_ &Writer );
+			xml::rWriter &Writer );
 
 		void HandleBackendTypeSwitching( sProxy &Proxy );
 

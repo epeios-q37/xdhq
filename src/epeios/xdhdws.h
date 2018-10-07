@@ -41,7 +41,7 @@ namespace xdhdws {
 	class sProxy
 	{
 	private:
-		Q37_MRMDF( xdhcmn::cProxy, C_, Callback_ );
+		Q37_MRMDF( xdhcmn::cUpstream, C_, Callback_ );
 	public:
 		void reset( bso::bool__ P = true )
 		{
@@ -52,7 +52,7 @@ namespace xdhdws {
 			Callback_ = NULL;
 		}
 		E_CVDTOR( sProxy );
-		void Init( xdhcmn::cProxy *Callback )	// 'Callback' is destroyed by a 'delete' when this object is dsetroyed.
+		void Init( xdhcmn::cUpstream *Callback )	// 'Callback' is destroyed by a 'delete' when this object is destroyed.
 		{
 			reset();
 
@@ -108,6 +108,12 @@ namespace xdhdws {
 		qRT
 		qRE
 			return Confirmed;
+		}
+		void SetHead(
+			const nstring___ &XML,
+			const nstring___ &XSL )
+		{
+			C_().Process( xdhcmn::fSetHead, NULL, XML.Internal()(), XSL.Internal()() );
 		}
 		void SetLayout(
 			const nstring___ &Id,

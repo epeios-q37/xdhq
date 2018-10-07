@@ -29,17 +29,19 @@ namespace {
 	using rgstry::rEntry;
 
 	namespace {
-		rEntry XSLFiles_( "XSLFiles", sclrgstry::Definitions );
-		rEntry UntaggedXSLFile_( "XSLFile", XSLFiles_ );
+		rEntry XMLFiles_( "XMLFiles", sclrgstry::Definitions );
+		rEntry UntaggedXSLFile_( "XSLFile", XMLFiles_ );
 	}
 }
 
-rgstry::rEntry registry::definition::XSLFilesHandling( "@Handling", XSLFiles_ );
+rgstry::rEntry registry::definition::XMLFilesHandling( "@Handling", XMLFiles_ );
 rgstry::rEntry registry::definition::XSLFile( RGSTRY_TAGGING_ATTRIBUTE( "target" ), UntaggedXSLFile_ );
+rgstry::rEntry registry::definition::HeadFile( "HeadFile", XMLFiles_ );
 
 namespace {
 	E_CDEF(char *, StraightBackendType_, "Straight" );
 	E_CDEF(char *, EmbeddedBackendType_, "Embedded" );
+	fHead HeadFunction_ = NULL;	// Function returning the user's HTML head section used by the Atlas toolkit.
 }
 
 static bso::bool__ IsInitialized_ = false;
@@ -59,6 +61,14 @@ const char *sclxdhtml::GetLauncher( void )
 	return Launcher_;
 }
 
+void sclxdhtml::SetHeadFunction( fHead HeadFunction )
+{
+	if ( HeadFunction_ != NULL )
+		qRFwk();
+
+	HeadFunction_ = HeadFunction;
+}
+
 #ifdef CPE_S_WIN
 # define FUNCTION_SPEC __declspec(dllexport)
 #else
@@ -67,7 +77,6 @@ const char *sclxdhtml::GetLauncher( void )
 
 // Bien que dfinit dans un '.cpp', et propre  ce '.cpp', VC++ se mlange les pinceaux avec le 'callback__' dfinit dans 'scllocale.cpp', d'o le 'namespace'.
 namespace {
-
 	typedef xdhcmn::cDownstream cDownstream_;
 
 	class sDownstream
@@ -104,13 +113,25 @@ namespace {
 		virtual xdhcmn::cSession *XDHCMNRetrieveCallback(
 			const char *Language,
 			const str::dString &Token,
-			xdhcmn::cProxy *ProxyCallback ) override
+			xdhcmn::cUpstream *UpstreamCallback ) override
 		{
-			return SCLXDHTMLRetrieveCallback( Language, Mode_, Token, ProxyCallback );
+			return SCLXDHTMLRetrieveCallback( Language, Mode_, Token, UpstreamCallback );
 		}
 		virtual void XDHCMNReleaseCallback( xdhcmn::cSession *Callback ) override
 		{
 			return SCLXDHTMLReleaseCallback( Callback );
+		}
+		const scli::sInfo &XDHCMNGetInfo( void ) override
+		{
+			return SCLXDHTMLInfo();
+		}
+		void XDHCMNGetHead(
+			void *UP,
+			str::dString &Head ) override
+		{
+			if ( !sclmisc::LoadXMLAndTranslateTags( registry::definition::HeadFile, sclrgstry::GetCommonRegistry(), Head, sclrgstry::nOptional, 1, DefaultMarker ) )
+				if ( HeadFunction_ != NULL )
+					HeadFunction_( UP, Head );
 		}
 	public:
 		void reset( bso::bool__ P = true )
@@ -160,7 +181,7 @@ namespace {
 	{
 	qRH
 		flx::E_STRING_TOFLOW___ STOFlow;
-		xml::writer Writer;
+		xml::rWriter Writer;
 	qRB
 		STOFlow.Init( XML );
 		Writer.Init( STOFlow, xml::oCompact, xml::e_Default );
@@ -189,7 +210,7 @@ namespace {
 	qRE
 	}
 
-	inline void EncodeXSL_(
+	inline void EncodeXML_(
 		const str::string_ &Plain,
 		str::dString &Encoded )
 	{
@@ -223,7 +244,7 @@ namespace {
 		else
 			TanslateAndPutInXML_( Message.UTF8( Buffer ), Language, XML );
 
-		EncodeXSL_( str::wString( AlertBaseXSL_ ), XSL );
+		EncodeXML_( str::wString( AlertBaseXSL_ ), XSL );
 	qRR
 	qRT
 	qRE
@@ -267,6 +288,24 @@ qRT
 qRE
 }
 
+void sclxdhtml::sProxy::AlertB( const ntvstr::string___ & RawMessage )
+{
+qRH;
+	str::wString Script, Buffer;
+qRB;
+	Script.Init( "alert('" );
+
+	Buffer.Init();
+	xdhcmn::Escape( RawMessage.UTF8( Buffer ), Script, '\'' );
+
+	Script.Append( "');" );
+
+	Execute( Script );
+qRR;
+qRT;
+qRE;
+}
+
 void sclxdhtml::sProxy::Alert(
 	const ntvstr::string___ &XML,
 	const ntvstr::string___ &XSL,
@@ -278,7 +317,7 @@ qRH;
 	str::string Buffer;
 qRB;
 	tol::Init( EncodedXSL, Buffer );
-	EncodeXSL_( XSL.UTF8( Buffer ), EncodedXSL );
+	EncodeXML_( XSL.UTF8( Buffer ), EncodedXSL );
 
 	Alert_( XML, EncodedXSL, Title, Language );
 qRR;
@@ -374,10 +413,10 @@ qRB
 		break;
 	case err::t_Free:
 	case err::t_Return:
-		Proxy.AlertU( "???", Language );
+		Proxy.AlertB( "???" );
 		break;
 	default:
-		Proxy.AlertU( err::Message( ErrBuffer ), Language );
+		Proxy.AlertB( err::Message( ErrBuffer ) );
 		break;
 	}
 
@@ -388,7 +427,7 @@ qRE
 }
 
 namespace {
-	eXSLFileHandling GetXSLFileHandlingFromRegistry_( const sclrgstry::dRegistry &Registry )
+	eXSLFileHandling GetXMLFileHandlingFromRegistry_( const sclrgstry::dRegistry &Registry )
 	{
 		eXSLFileHandling Result = xfh_Undefined;
 	qRH;
@@ -396,7 +435,7 @@ namespace {
 	qRB;
 		Handling.Init();
 
-		if ( !sclrgstry::OGetValue( Registry, registry::definition::XSLFilesHandling, Handling ) )
+		if ( !sclrgstry::OGetValue( Registry, registry::definition::XMLFilesHandling, Handling ) )
 			Handling.Append( "Content" );	// Default value.
 
 		if ( Handling == "Content" )
@@ -404,7 +443,7 @@ namespace {
 		else if ( Handling == "Name" )
 			Result = xfhName;
 		else
-			sclrgstry::ReportBadOrNoValueForEntryErrorAndAbort( registry::definition::XSLFilesHandling );
+			sclrgstry::ReportBadOrNoValueForEntryErrorAndAbort( registry::definition::XMLFilesHandling );
 	qRR;
 	qRT;
 	qRE;
@@ -412,10 +451,9 @@ namespace {
 	}
 }
 
-
 void sclxdhtml::sProxy::SetLayout_(
 	const xdhdws::nstring___ &Id,
-	const rgstry::rEntry & Filename,
+	const rgstry::rEntry &XSLFilename,
 	const char *Target,
 	const sclrgstry::registry_ &Registry,
 	const str::dString &XML,
@@ -428,13 +466,13 @@ qRB;
 	XSL.Init();
 
 	if ( Handling == xfhRegistry )
-		Handling = GetXSLFileHandlingFromRegistry_( Registry );
+		Handling = GetXMLFileHandlingFromRegistry_( Registry );
 
 	switch ( Handling ) {
 	case xfhContent:
 		// The content of the XSL file is transmitted (global XDHTML behavior).
 		RawXSL.Init();
-		sclxdhtml::LoadXSLAndTranslateTags( rgstry::tentry___( Filename, Target ), Registry, RawXSL, Marker );
+		sclxdhtml::LoadXSLAndTranslateTags( rgstry::tentry___( XSLFilename, Target ), Registry, RawXSL, Marker );
 		XSL.Append( "data:text/xml;charset=utf-8," );
 		cdgurl::Encode( RawXSL, XSL );
 		break;
@@ -658,11 +696,9 @@ void sclxdhtml::sProxy::DisableElement( const str::dString &Id )
 	HandleElement_( Id, &sProxy::DisableElements, *this );
 }
 
-qCDEF( char *, sclxdhtml::RootTagId_, "XDHRoot" );
-
 void sclxdhtml::prolog::GetLayout(
 	sclfrntnd::rFrontend &Frontend,
-	xml::writer_ &Writer)
+	xml::rWriter &Writer)
 {
 	sclfrntnd::GetProjectsFeatures( Frontend.Language(), Writer );
 }
@@ -793,7 +829,7 @@ const char *sclxdhtml::login::GetLabel( eBackendVisibility Visibility )
 
 sclfrntnd::eLogin sclxdhtml::login::GetLayout(
 	sclfrntnd::rFrontend &Frontend,
-	xml::writer_ &Writer)
+	xml::rWriter &Writer)
 {
 	sclfrntnd::GetBackendsFeatures( Frontend.Language(), Writer );
 
