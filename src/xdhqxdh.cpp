@@ -49,6 +49,17 @@ namespace {
 		cSetLayout_1,
 		cGetContents_1,
 		cSetContents_1,
+		cSetTimeout_1,
+		cParent_1,
+		cFirstChild_1,
+		cLastChild_1,
+		cPreviousSibling_1,
+		cNextSibling_1,
+		cCreateElement_1,
+		cInsertChild_1,
+		cAppendChild_1,
+		cInsertBefore_1,
+		cInsertAfter_1,
 		cDressWidgets_1,
 		cAddClasses_1,
 		cRemoveClasses_1,
@@ -79,6 +90,17 @@ namespace {
 			C( SetLayout_1 );
 			C( GetContents_1 );
 			C( SetContents_1 );
+			C( SetTimeout_1 );
+			C( Parent_1 );
+			C( FirstChild_1 );
+			C( LastChild_1 );
+			C( PreviousSibling_1 );
+			C( NextSibling_1 );
+			C( CreateElement_1 );
+			C( InsertChild_1 );
+			C( AppendChild_1 );
+			C( InsertBefore_1 );
+			C( InsertAfter_1 );
 			C( DressWidgets_1 );
 			C( AddClasses_1 );
 			C( RemoveClasses_1 );
@@ -326,6 +348,234 @@ namespace {
 		xdhcmn::FlatMerge( Contents, MergedContents, true );
 
 		Proxy.SetContents( MergedIds, MergedContents );
+	qRR;
+	qRT;
+	qRE;
+	}
+
+	void SetTimeout_(
+		flw::sRWFlow &Flow,
+		xdhdws::sProxy &Proxy )
+	{
+	qRH;
+		str::wString Delay, Action;
+	qRB;
+		tol::Init( Delay, Action );
+		prtcl::Get( Flow, Delay );
+		prtcl::Get( Flow, Action );
+
+		Proxy.SetTimeout( Delay, Action );
+	qRR;
+	qRT;
+	qRE;
+	}
+
+	void Parent_(
+		flw::sRWFlow &Flow,
+		xdhdws::sProxy &Proxy )
+	{
+	qRH;
+		str::wString Id;
+		qCBUFFERr Parent;
+	qRB;
+		tol::Init( Id );
+		prtcl::Get( Flow, Id );
+
+		Proxy.Parent( Id, Parent );
+
+		Flow.Dismiss();
+
+		prtcl::Put( Parent(), Flow );
+		Flow.Commit();
+	qRR;
+	qRT;
+	qRE;
+	}
+
+	void FirstChild_(
+		flw::sRWFlow &Flow,
+		xdhdws::sProxy &Proxy )
+	{
+	qRH;
+		str::wString Id;
+		qCBUFFERr Child;
+	qRB;
+		tol::Init( Id );
+		prtcl::Get( Flow, Id );
+
+		Proxy.FirstChild( Id, Child );
+
+		Flow.Dismiss();
+
+		prtcl::Put( Child(), Flow );
+
+		Flow.Commit();
+	qRR;
+	qRT;
+	qRE;
+	}
+
+	void LastChild_(
+		flw::sRWFlow &Flow,
+		xdhdws::sProxy &Proxy )
+	{
+	qRH;
+		str::wString Id;
+		qCBUFFERr Child;
+	qRB;
+		tol::Init( Id );
+		prtcl::Get( Flow, Id );
+
+		Proxy.LastChild( Id, Child );
+
+		Flow.Dismiss();
+
+		prtcl::Put( Child(), Flow );
+
+		Flow.Commit();
+	qRR;
+	qRT;
+	qRE;
+	}
+
+	void PreviousSibling_(
+		flw::sRWFlow &Flow,
+		xdhdws::sProxy &Proxy )
+	{
+	qRH;
+		str::wString Id;
+		qCBUFFERr Sibling;
+	qRB;
+		tol::Init( Id );
+		prtcl::Get( Flow, Id );
+
+		Proxy.PreviousSibling( Id, Sibling );
+
+		Flow.Dismiss();
+
+		prtcl::Put( Sibling(), Flow );
+
+		Flow.Commit();
+	qRR;
+	qRT;
+	qRE;
+	}
+
+	void NextSibling_(
+		flw::sRWFlow &Flow,
+		xdhdws::sProxy &Proxy )
+	{
+	qRH;
+		str::wString Id;
+		qCBUFFERr Sibling;
+	qRB;
+		tol::Init( Id );
+		prtcl::Get( Flow, Id );
+
+		Proxy.NextSibling( Id, Sibling );
+
+		Flow.Dismiss();
+
+		prtcl::Put( Sibling(), Flow );
+
+		Flow.Commit();
+	qRR;
+	qRT;
+	qRE;
+	}
+
+	void CreateElement_(
+		flw::sRWFlow &Flow,
+		xdhdws::sProxy &Proxy )
+	{
+	qRH;
+		str::wString Name, SuggestedId;
+		qCBUFFERr Id;
+	qRB;
+		tol::Init( Name, SuggestedId );
+
+		prtcl::Get( Flow, Name );
+		prtcl::Get( Flow, SuggestedId );
+
+		Proxy.CreateElement( Name, SuggestedId, Id );	// If 'SuggestedId' is empty, 'Id' will contain a computer generated one, otherwise it will contain 'SuggestedId'.
+
+		Flow.Dismiss();
+
+		prtcl::Put( Id(), Flow );
+
+		Flow.Commit();
+	qRR;
+	qRT;
+	qRE;
+	}
+
+	void InsertChild_(
+		flw::sRWFlow &Flow,
+		xdhdws::sProxy &Proxy )
+	{
+	qRH;
+		str::wString Child, Id;
+	qRB;
+		tol::Init( Child, Id );
+
+		prtcl::Get( Flow, Child );
+		prtcl::Get( Flow, Id );
+
+		Proxy.InsertChild( Child, Id );
+	qRR;
+	qRT;
+	qRE;
+	}
+
+	void AppendChild_(
+		flw::sRWFlow &Flow,
+		xdhdws::sProxy &Proxy )
+	{
+	qRH;
+		str::wString Child, Id;
+	qRB;
+		tol::Init( Child, Id );
+
+		prtcl::Get( Flow, Child );
+		prtcl::Get( Flow, Id );
+
+		Proxy.AppendChild( Child, Id );
+	qRR;
+	qRT;
+	qRE;
+	}
+
+	void InsertBefore_(
+		flw::sRWFlow &Flow,
+		xdhdws::sProxy &Proxy )
+	{
+	qRH;
+		str::wString Sibling, Id;
+	qRB;
+		tol::Init( Sibling, Id );
+
+		prtcl::Get( Flow, Sibling );
+		prtcl::Get( Flow, Id );
+
+		Proxy.InsertBefore( Sibling, Id );
+	qRR;
+	qRT;
+	qRE;
+	}
+
+	void InsertAfter_(
+		flw::sRWFlow &Flow,
+		xdhdws::sProxy &Proxy )
+	{
+	qRH;
+		str::wString Sibling, Id;
+	qRB;
+		tol::Init( Sibling, Id );
+
+		prtcl::Get( Flow, Sibling );
+		prtcl::Get( Flow, Id );
+
+		Proxy.InsertAfter( Sibling, Id );
 	qRR;
 	qRT;
 	qRE;
@@ -614,6 +864,17 @@ namespace {
 				H( SetLayout );
 				H( GetContents );
 				H( SetContents );
+				H( SetTimeout );
+				H( Parent );
+				H( FirstChild );
+				H( LastChild );
+				H( PreviousSibling );
+				H( NextSibling );
+				H( CreateElement );
+				H( InsertChild );
+				H( AppendChild );
+				H( InsertBefore );
+				H( InsertAfter );
 				H( DressWidgets );
 				H( AddClasses );
 				H( RemoveClasses );
@@ -646,11 +907,12 @@ namespace {
 			xdhdws::sProxy::reset( P );
 		}
 		qCVDTOR( rSession_ )
-		void Init(
+		bso::sBool Init(
 			xdhcmn::cUpstream *Callback,
 			const char *Language,
 			const str::dString &Token )	// If empty, PROD session, else token used for the DEMO session.
 		{
+			bso::sBool Success = false;
 		qRH;
 			flw::sDressedRWFlow<> Flow;
 			csdcmn::sVersion Version = csdcmn::UndefinedVersion;
@@ -661,24 +923,33 @@ namespace {
 			if ( Token.Amount() == 0 ) {
 				ProdDriver_.Init( Core_, fdr::ts_Default );
 				Mode_ = mProd;
+				Success = true;
 			} else {
-				DemoDriver_.Init( dmopool::GetConnection( Token ), true, fdr::ts_Default );
-				Mode_ = mDemo;
+				sck::sSocket Socket = dmopool::GetConnection( Token );
+
+				if ( Socket != sck::Undefined ) {
+					DemoDriver_.Init(Socket, true, fdr::ts_Default );
+					Mode_ = mDemo;
+					Success = true;
+				}
 			}
 
-			Flow.Init( D_() );
+			if ( Success ) {
+				Flow.Init( D_() );
 
-			prtcl::Put( Language, Flow );
+				prtcl::Put( Language, Flow );
 
-			Flow.Commit();
+				Flow.Commit();
 
-			if ( (Version = csdcmn::GetProtocolVersion( prtcl::ProtocolId, Flow )) != prtcl::ProtocolVersion )
-				qRGnr();
+				if ( (Version = csdcmn::GetProtocolVersion( prtcl::ProtocolId, Flow )) != prtcl::ProtocolVersion )
+					qRGnr();
 
-			xdhdws::sProxy::Init( Callback );
+				xdhdws::sProxy::Init( Callback );
+			}
 		qRR;
 		qRT;
 		qRE;
+			return Success;
 		}
 		operator fdr::rRWDriver &( void )
 		{
@@ -697,19 +968,30 @@ xdhcmn::cSession *sclxdhtml::SCLXDHTMLRetrieveCallback(
 	const str::dString &Token,
 	xdhcmn::cUpstream *UpstreamCallback )
 {
-	rSession_ *Session = new rSession_;
+	rSession_ *Session = NULL;
+qRH;
 	bso::sBool Continue = true;
+qRB;
+	if ( ( Session = new rSession_ ) == NULL )
+		qRAlc();
 
-	if ( Session == NULL )
-		qRGnr();
+	if ( !Session->Init( UpstreamCallback, Language, Token ) ) {
+		delete Session;
+		Session = NULL;
+	}
 
-	Session->Init( UpstreamCallback, Language, Token );
-
-	// WARNING ! In 'MultiUser' mode, 'ProxyCallback' is not correctly set yet!
+	// WARNING ! In 'MultiUser' mode, 'UpstreamCallback' is not correctly set yet!
 /*	if ( Mode == xdhcmn::mMonoUser ) {
 		Session->Launch( "", "" );
 	}
 */
+qRR;
+	if ( Session != NULL )
+		delete Session;
+
+	Session = NULL;
+qRT;
+qRE;
 	return Session;
 }
 

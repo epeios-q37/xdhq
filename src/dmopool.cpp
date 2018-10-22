@@ -277,33 +277,24 @@ sck::sSocket dmopool::GetConnection( const str::dString &Token )
 	sck::sSocket Socket = sck::Undefined;
 	rClient_ *Client = TSClientSearch_( Token );
 
-	if ( Client == NULL )
-		qRGnr();
+	if ( Client != NULL ) {
+		if ( !Client->Access.ReadBegin( 1000 ) ) {	// Give 1 second to the client to respond.
+			Client->GiveUp = true;				// No available connections within 1 second, tells other to give up.
+			Client->Access.WriteDismiss();		// The 'ReadBegin()' from another thread will now succeed.
+			qRGnr();
+		}
 
-	if ( !Client->Access.ReadBegin( 1000 ) ) {	// Give 1 second to the client to respond.
-		Client->GiveUp = true;				// No available connections within 1 second, tells other to give up.
-		Client->Access.WriteDismiss();		// The 'ReadBegin()' from another thread will now succeed.
-		qRGnr();
+		if ( Client->GiveUp ) {	// 'ReadBegin()' succeeded, but we have were instructed to give up.
+			Client->Access.ReadEnd();	// For the following 'WriteDismiss()' to succeed.
+			Client->Access.WriteDismiss();		// The 'ReadBegin()' from another thread will now succeed.
+			qRGnr();
+		}
+
+		Socket = Client->Socket;
+		Client->Access.ReadEnd();
 	}
-
-	if ( Client->GiveUp ) {	// 'ReadBegin()' succeeded, but we have were instructed to give up.
-		Client->Access.ReadEnd();	// For the following 'WriteDismiss()' to succeed.
-		Client->Access.WriteDismiss();		// The 'ReadBegin()' from another thread will now succeed.
-		qRGnr();
-	}
-
-	Socket = Client->Socket;
-	Client->Access.ReadEnd();
 
 	return Socket;
-}
-
-qGCTOR( dmopool )
-{
-	MutexHandler_ = mtx::Create();
-	_Tokens_.Init();
-	Heads_.Init();
-	Clients_.Init();
 }
 
 namespace {
@@ -311,12 +302,17 @@ namespace {
 		void *UP,
 		str::dString &Head )
 	{
-		TSHeadSearch_( *(const str::wString *)UP, Head );
+		TSHeadSearch_( *(const str::wString *)UP, Head );	// 'UP' contains the token.
 	}
 }
 
-qGCTOR( dlopool )
+
+qGCTOR( dmopool )
 {
+	MutexHandler_ = mtx::Create();
+	_Tokens_.Init();
+	Heads_.Init();
+	Clients_.Init();
 	sclxdhtml::SetHeadFunction( GetHead_ );
 }
 
