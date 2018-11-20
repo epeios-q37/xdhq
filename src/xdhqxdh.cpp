@@ -999,6 +999,8 @@ namespace {
 
 				Flow.Commit();
 
+				Version = csdcmn::GetProtocolVersion( prtcl::ProtocolId, Flow );
+
 				switch ( Version ) {
 				case 0:
 					LogMessage.Append( "N/A" );
