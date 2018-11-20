@@ -22,7 +22,7 @@
   <Import Project="Windows.targets"/>
   <Import Project="Details.props"/>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>6d628dd1-9e66-4431-878f-9ef6414da126</ProjectGuid>
+    <ProjectGuid>a1f4feaf-9a78-4fbe-90dd-8b425c80463a</ProjectGuid>
     <RootNamespace>xdhqxdh</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props"/>
@@ -134,6 +134,7 @@
     <ClCompile Include="src/epeios/strmrg.cpp"/>
     <ClCompile Include="src/epeios/cdgurl.cpp"/>
     <ClCompile Include="src/epeios/cnvfdr.cpp"/>
+    <ClCompile Include="src/epeios/logq.cpp"/>
     <ClCompile Include="src/epeios/sck.cpp"/>
     <ClCompile Include="src/epeios/csdrcc.cpp"/>
     <ClCompile Include="src/epeios/csdbnc.cpp"/>
