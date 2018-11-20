@@ -1,7 +1,7 @@
 # xdhqxdh.appveyor
 
 environment:
-  version: 20181108
+  version: 20181120
   affix: xdhqxdh
 
 skip_tags: true	

@@ -29,6 +29,7 @@ using namespace dmopool;
 #include "crt.h"
 #include "csdbns.h"
 #include "flx.h"
+#include "logq.h"
 #include "mtk.h"
 #include "sclmisc.h"
 #include "str.h"
@@ -41,6 +42,7 @@ namespace {
 		sck::sSocket Socket;
 		tht::rReadWrite Access;
 		bso::sBool GiveUp;
+		str::wString IP;
 		void reset( bso::sBool P = true )
 		{
 			if ( P ) {
@@ -64,7 +66,7 @@ namespace {
 
 	mtx::rHandler MutexHandler_ = mtx::Undefined;
 	qROW( Row );
-	crt::qMCRATEw( str::dString, sRow ) _Tokens_;
+	crt::qMCRATEw( str::dString, sRow ) Tokens_;
 	crt::qMCRATEw( str::dString, sRow ) Heads_;
 	bch::qBUNCHw( rClient_ *, sRow ) Clients_;
 	csdbns::rListener Listener_;
@@ -74,10 +76,10 @@ namespace {
 		if ( !mtx::IsLocked( MutexHandler_ ) )
 			qRGnr();
 
-		sRow Row = _Tokens_.First();
+		sRow Row = Tokens_.First();
 
-		while ( (Row != qNIL) && (_Tokens_( Row ) != Token) )
-			Row = _Tokens_.Next( Row );
+		while ( (Row != qNIL) && ( Tokens_( Row ) != Token) )
+			Row = Tokens_.Next( Row );
 
 		return Row;
 	}
@@ -149,7 +151,7 @@ namespace {
 		Row = TUSearch_( Token );
 
 		if ( Row == qNIL ) {
-			Row = _Tokens_.Append( Token );
+			Row = Tokens_.Append( Token );
 
 			if ( Row != Clients_.New() )
 				qRGnr();
@@ -189,18 +191,28 @@ namespace {
 		prtcl::Put( String, Flow );
 	}
 
+	struct sData_
+	{
+		sck::sSocket Socket = sck::Undefined;
+		const char *IP = NULL;
+	};
+
 	void NewConnexionRoutine_(
-		void *UP,
+		sData_ &Data,
 		mtk::gBlocker &Blocker )
 	{
 	qRFH;
-		sck::sSocket Socket = *(sck::sSocket *)UP;
+		sck::sSocket Socket = sck::Undefined;
+		str::wString IP;
 		str::wString Token, Head;
 		sck::rRWFlow Flow;
 		tol::bUUID UUID;
 		rClient_ *Client = NULL;
 		mtx::rMutex Mutex;
 	qRFB;
+		Socket = Data.Socket;
+		IP.Init( Data.IP );
+
 		Blocker.Release();
 
 		Flow.Init( Socket, false, sck::NoTimeout );
@@ -231,6 +243,7 @@ namespace {
 		else {
 			Client->Access.WriteBegin();
 			Client->Socket = Socket;
+			Client->IP.Init( IP );
 			Client->Access.WriteEnd();
 		}
 
@@ -243,15 +256,12 @@ namespace {
 	void ListeningRoutine_( void * )
 	{
 	qRFH;
-		sck::sSocket Socket = sck::Undefined;
-		const char *IP;
+		sData_ Data;
 	qRFB;
 		while ( true ) {
-			Socket = sck::Undefined;
+			Data.Socket = Listener_.GetConnection( Data.IP );
 
-			Socket = Listener_.GetConnection( IP );
-
-			mtk::Launch( NewConnexionRoutine_, &Socket );
+			mtk::Launch( NewConnexionRoutine_, Data );
 		}
 	qRFR;
 	qRFT;
@@ -274,7 +284,9 @@ qRT;
 qRE;
 }
 
-sck::sSocket dmopool::GetConnection( const str::dString &Token )
+sck::sSocket dmopool::GetConnection(
+	const str::dString &Token,
+	str::dString &IP )
 {
 	sck::sSocket Socket = sck::Undefined;
 	rClient_ *Client = TSClientSearch_( Token );
@@ -293,6 +305,7 @@ sck::sSocket dmopool::GetConnection( const str::dString &Token )
 		}
 
 		Socket = Client->Socket;
+		IP.Append( Client->IP );
 		Client->Access.ReadEnd();
 	}
 
@@ -312,7 +325,7 @@ namespace {
 qGCTOR( dmopool )
 {
 	MutexHandler_ = mtx::Create();
-	_Tokens_.Init();
+	Tokens_.Init();
 	Heads_.Init();
 	Clients_.Init();
 	sclxdhtml::SetHeadFunction( GetHead_ );
