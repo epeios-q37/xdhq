@@ -6,8 +6,22 @@
    <Command>Test</Command>
    <HostService>localhost:53752</HostService>
    <DemoService>53800</DemoService>
+   <Plugins/>
   </Parameters>
-  <Definitions/>
+  <Definitions>
+   <Plugins target="Token">
+    <Plugin id="Forbidden">
+     <Filename>Forbidden/forbidden</Filename>
+     <Configuration>
+      <Parameters>
+       <Command>Default</Command>
+      </Parameters>
+      <Arguments/>
+     </Configuration>
+     <Locale/>
+    </Plugin>
+   </Plugins>
+  </Definitions>
   <Locale>
    <Translations text="TestCommandDescription">
     <Translation language="fr">Commande de test.</Translation>

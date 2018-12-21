@@ -1,14 +1,14 @@
 {
   "name": "xdhqxdh",
-  "version": "2018.12.7",
+  "version": "2018.12.21",
   "author": "Claude SIMON (http://q37.info/contact/)",
   "description": "'XDHTML' proxy",
   "main": "XDHq.js",
   "binary": {
     "module_name": "xdhqxdh",
     "module_path": "./",
-    "remote_path": "./epeios-q37/xdhq/releases/download/v20181207/",
-    "package_name": "{module_name}-v20181207-{platform}-{arch}.tar.gz",
+    "remote_path": "./epeios-q37/xdhq/releases/download/v20181221/",
+    "package_name": "{module_name}-v20181221-{platform}-{arch}.tar.gz",
     "host": "https://github.com"
   },
   "dependencies": {},

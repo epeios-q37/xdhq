@@ -22,7 +22,7 @@
   <Import Project="Windows.targets"/>
   <Import Project="Details.props"/>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>d8cae46d-278f-45a1-b621-55a2cf5ff75f</ProjectGuid>
+    <ProjectGuid>a16c1eae-aaed-4990-8755-ca6733be43b7</ProjectGuid>
     <RootNamespace>xdhqxdh</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props"/>
@@ -65,6 +65,7 @@
     <ClCompile Include="src/dmopool.cpp"/>
     <ClCompile Include="src/registry.cpp"/>
     <ClCompile Include="src/prtcl.cpp"/>
+    <ClCompile Include="src/plugins.cpp"/>
     <ClCompile Include="src/epeios/ags.cpp"/>
     <ClCompile Include="src/epeios/aem.cpp"/>
     <ClCompile Include="src/epeios/bch.cpp"/>

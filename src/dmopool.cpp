@@ -23,6 +23,8 @@ using namespace dmopool;
 
 #include "prtcl.h"
 
+#include "plugins.h"
+
 #include "registry.h"
 
 #include "bch.h"
@@ -52,6 +54,7 @@ namespace {
 
 			Socket = sck::Undefined;
 			Access.reset( P );
+			tol::reset( P, IP );
 			GiveUp = false;	// If at 'true', the client is deemed to be disconnected.
 		}
 		qCDTOR( rClient_ );
@@ -60,6 +63,7 @@ namespace {
 			reset();
 
 			Access.Init();
+			tol::Init( IP );
 			GiveUp = false;
 		}
 	};
@@ -197,6 +201,50 @@ namespace {
 		const char *IP = NULL;
 	};
 
+	namespace token_ {
+		plgn::rRetriever<plugins::cToken> PluginRetriever_;
+
+		class sToken_
+		: public plugins::cToken
+		{
+		protected:
+			plugins::eStatus PLUGINSHandle(
+				const str::dString &Raw,
+				str::dString &Normalized ) override
+			{
+				plugins::eStatus Status = plugins::sNew;
+				tol::bUUID UUID;
+
+				Normalized = Raw;
+
+				if ( Raw.Amount() == 0 )
+					Normalized.Append( tol::UUIDGen( UUID ) );
+				else if ( (Raw.Amount() > 1) && (Raw( 0 ) == '&') )
+					Normalized.Remove( Normalized.First() );
+				else
+					Status = plugins::sPending;
+
+				return Status;
+			}
+		public:
+			void reset(bso::sBool = true ) {}
+			qCVDTOR( sToken_ );
+			void Init( void ) {}
+		} DefaultHandler_;
+
+		plugins::cToken &GetPlugin( void )
+		{
+			PluginRetriever_.Init();
+
+			if ( sclmisc::Plug( plugins::TokenPluginTarget, NULL, PluginRetriever_, qRPU ) )
+				return PluginRetriever_.Plugin();
+			else {
+				DefaultHandler_.Init();
+				return DefaultHandler_;
+			}
+		}
+	}
+
 	void NewConnexionRoutine_(
 		sData_ &Data,
 		mtk::gBlocker &Blocker )
@@ -204,43 +252,44 @@ namespace {
 	qRFH;
 		sck::sSocket Socket = sck::Undefined;
 		str::wString IP;
-		str::wString Token, Head;
+		str::wString Token, Head, ErrorMessageLabel, ErrorMessage;
 		sck::rRWFlow Flow;
-		tol::bUUID UUID;
 		rClient_ *Client = NULL;
 		mtx::rMutex Mutex;
+		plugins::eStatus Status = plugins::s_Undefined;
 	qRFB;
 		Socket = Data.Socket;
 		IP.Init( Data.IP );
 
 		Blocker.Release();
 
+		ErrorMessage.Init();
+
 		Flow.Init( Socket, false, sck::NoTimeout );
 
 		Token.Init();
 		Get_( Flow, Token );
 
-		if ( ( Token.Amount() == 0 )
-			   || ( ( Token.Amount() > 1 ) &&
-				    ( ( Token( 0 ) == '_' )	// This is deprecated; only '&' will be used as forced token marker in the future.
-					   || ( Token( 0 ) == '&' ) ) ) ) {
-
-			if ( Token.Amount() == 0 )
-				Token.Append( tol::UUIDGen( UUID ) );
-			else
-				Token.Remove( Token.First() );
-
+		switch ( Status = token_::GetPlugin().Handle( Token ) ) {
+		case plugins::sNew:
 			Head.Init();
 			Get_( Flow, Head );
 
 			Client = Create_( Token, Head );
-		} else {
+			break;
+		case plugins::sPending:
 			Client = TSClientSearch_( Token );
+			break;
+		default:
+			Token.Init();
+			ErrorMessageLabel.Init( "PLUGINS_" );
+			ErrorMessageLabel.Append( plugins::GetLabel( Status ) );
+			sclmisc::GetBaseTranslation( ErrorMessageLabel, ErrorMessage );
+			break;
 		}
 
-		if ( Client == NULL )
-			Token.Init();
-		else {
+
+		if ( Client != NULL ) {
 			Client->Access.WriteBegin();
 			Client->Socket = Socket;
 			Client->IP.Init( IP );
@@ -248,6 +297,9 @@ namespace {
 		}
 
 		Put_( Token, Flow );
+
+		if ( Token.Amount() == 0 )
+			Put_( ErrorMessage, Flow );
 	qRFR;
 	qRFT;
 	qRFE( sclmisc::ErrFinal() );
