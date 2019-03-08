@@ -32,55 +32,113 @@ using namespace dmopool;
 #include "csdbns.h"
 #include "flx.h"
 #include "logq.h"
+#include "lstbch.h"
 #include "mtk.h"
 #include "sclmisc.h"
 #include "str.h"
 
 
 namespace {
-	class rClient_
+	static qCDEF( char *, ProtocolId_, "877c913f-62df-40a1-bf5d-4bb5e66a6dd9" );
+
+	namespace registry_ {
+		namespace parameter {
+			sclrgstry::rEntry Notification( "DemoNotification", sclrgstry::Parameters );
+		}
+	}
+
+	qROW( FRow );	// FrontenrdRow.
+
+	typedef lstbch::qLBUNCHd( rShared *, sFRow ) dShareds_;
+	qW( Shareds_ );
+
+	qROW( BRow );	// Back-end Row.
+
+	class rBackend_
 	{
+	private:
+		void InvalidAll_( void )
+		{
+			sFRow Row = Shareds.First();
+
+			while ( Row != qNIL ) {
+				Shareds( Row )->Id = Undefined;
+
+				Row = Shareds.Next( Row );
+			}
+		}
 	public:
-		sck::sSocket Socket;
-		tht::rReadWrite Access;
+		sBRow Row;
+		fdr::rRWDriver *Driver;
+		wShareds_ Shareds;
+		mtx::rHandler Access;
+		tht::rBlocker Switch;
 		bso::sBool GiveUp;
 		str::wString IP;
 		void reset( bso::sBool P = true )
 		{
 			if ( P ) {
-				if ( Socket != sck::Undefined )
-					sck::Close( Socket, qRPU );
+				if ( Access != mtx::Undefined )
+					mtx::Delete( Access, true );
+
+				InvalidAll_();
 			}
 
-			Socket = sck::Undefined;
-			Access.reset( P );
+			Row = qNIL;
+			Driver = NULL;
+			Shareds.reset( P );
+			Access = mtx::Undefined;
+			Switch.reset( P );
 			tol::reset( P, IP );
 			GiveUp = false;	// If at 'true', the client is deemed to be disconnected.
 		}
-		qCDTOR( rClient_ );
-		void Init( void )
+		qCDTOR( rBackend_ );
+		void Init(
+			sBRow Row,
+			fdr::rRWDriver &Driver,
+			const str::dString &IP )
 		{
 			reset();
 
-			Access.Init();
-			tol::Init( IP );
+			this->Row = Row;
+			this->Driver = &Driver;
+			Shareds.Init();
+			Access = mtx::Create();
+			Switch.Init();
+			this->IP.Init( IP );
 			GiveUp = false;
+		}
+		bso::sBool Set( rShared &Shared )
+		{
+			sFRow Row = Shareds.New();
+
+			if ( *Row < Max ) {
+				Shareds.Store( &Shared, Row );
+
+				Shared.Id = (sId)*Row;
+				Shared.Driver = Driver;
+				Shared.Switch = &Switch;
+
+				return true;
+			} else
+				return false;
 		}
 	};
 
 	mtx::rHandler MutexHandler_ = mtx::Undefined;
-	qROW( Row );
-	crt::qMCRATEw( str::dString, sRow ) Tokens_;
-	crt::qMCRATEw( str::dString, sRow ) Heads_;
-	bch::qBUNCHw( rClient_ *, sRow ) Clients_;
+	crt::qMCRATEw( str::dString, sBRow ) Tokens_;
+	crt::qMCRATEw( str::dString, sBRow ) Heads_;
+	bch::qBUNCHw( rBackend_ *, sBRow ) Backends_;
 	csdbns::rListener Listener_;
 
-	sRow TUSearch_( const str::dString &Token )
+	// NOTA : TU : Thread Unsafe ; TS : Thread Safe.
+
+	sBRow TUGetBackendRow_( const str::dString &Token )
 	{
 		if ( !mtx::IsLocked( MutexHandler_ ) )
 			qRGnr();
 
-		sRow Row = Tokens_.First();
+		sBRow Row = Tokens_.First();
 
 		while ( (Row != qNIL) && ( Tokens_( Row ) != Token) )
 			Row = Tokens_.Next( Row );
@@ -88,36 +146,36 @@ namespace {
 		return Row;
 	}
 
-	rClient_ *TUClientSearch_( const str::dString &Token )
+	rBackend_ *TUGetBackend_( const str::dString &Token )
 	{
-		sRow Row = TUSearch_( Token );
+		sBRow Row = TUGetBackendRow_( Token );
 
 		if ( Row != qNIL )
-			return Clients_( Row );
+			return Backends_( Row );
 		else
 			return NULL;
 	}
 
-	rClient_ *TSClientSearch_( const str::dString &Token )
+	rBackend_ *TSGetBackend_( const str::dString &Token )
 	{
-		rClient_ *Client = NULL;
+		rBackend_ *Backend = NULL;
 	qRH;
 		mtx::rMutex Mutex;
 	qRB;
 		Mutex.InitAndLock( MutexHandler_ );
 
-		Client = TUClientSearch_( Token );
+		Backend = TUGetBackend_( Token );
 	qRR;
 	qRT;
 	qRE;
-		return Client;
+		return Backend;
 	}
 
-	const str::dString &TUHeadSearch_(
+	const str::dString &TUGetHead_(
 		const str::dString &Token,
 		str::dString &Head )
 	{
-		sRow Row = TUSearch_( Token );
+		sBRow Row = TUGetBackendRow_( Token );
 
 		if ( Row != qNIL )
 			Heads_.Recall( Row, Head );
@@ -125,7 +183,7 @@ namespace {
 		return Head;
 	}
 
-	const str::dString &TSHeadSearch_(
+	const str::dString &TSGetHead_(
 		const str::dString &Token,
 		str::dString &Head )
 	{
@@ -134,55 +192,75 @@ namespace {
 	qRB;
 		Mutex.InitAndLock( MutexHandler_ );
 
-		TUHeadSearch_( Token, Head );
+		TUGetHead_( Token, Head );
 	qRR;
 	qRT;
 	qRE;
 		return Head;
 	}
 
-	rClient_ *Create_(
+	void Remove_( sBRow Row )
+	{
+	qRH;
+		mtx::rMutex Mutex;
+	qRB;
+		Mutex.Init( MutexHandler_ );
+
+		if ( !Backends_.Exists( Row ) || !Tokens_.Exists( Row ) || !Heads_.Exists( Row ) )
+			qRGnr();
+
+		Backends_.Remove( Row );
+		Tokens_.Remove( Row );
+		Heads_.Remove( Row );
+	qRR;
+	qRT;
+	qRE;
+	}
+
+	rBackend_ *Create_(
+		fdr::rRWDriver &Driver,
+		const str::dString &IP,
 		const str::dString &Token,
 		const str::dString &Head )
 	{
-		rClient_ *Client = NULL;
+		rBackend_ *Backend = NULL;
 	qRH;
 		mtx::rMutex Mutex;
-		sRow Row = qNIL;
+		sBRow Row = qNIL;
 	qRB;
 		Mutex.InitAndLock( MutexHandler_) ;
 
-		Row = TUSearch_( Token );
+		Row = TUGetBackendRow_( Token );
 
 		if ( Row == qNIL ) {
 			Row = Tokens_.Append( Token );
 
-			if ( Row != Clients_.New() )
+			if ( Row != Backends_.New() )
 				qRGnr();
 
 			if ( Row != Heads_.New() )
 				qRGnr();
 		} else
-			delete Clients_( Row );
+			delete Backends_( Row );
 
-		if ( (Client = new rClient_) == NULL )
+		if ( (Backend = new rBackend_) == NULL )
 			qRAlc();
 
-		Client->Init();
+		Backend->Init( Row, Driver, IP );
 
-		Clients_.Store( Client, Row );
+		Backends_.Store( Backend, Row );
 
 		Heads_.Store( Head, Row );
 	qRR;
-		if ( Client != NULL )
-			delete Client;
+		if ( Backend != NULL )
+			delete Backend;
 	qRT;
 	qRE;
-		return Client;
+		return Backend;
 	}
 
 	void Get_(
-		flw::sRFlow &Flow,
+		flw::rRFlow &Flow,
 		str::dString &String )
 	{
 		prtcl::Get( Flow, String );
@@ -190,16 +268,17 @@ namespace {
 
 	void Put_(
 		const str::dString &String,
-		flw::sWFlow &Flow )
+		flw::rWFlow &Flow )
 	{
 		prtcl::Put( String, Flow );
 	}
 
-	struct sData_
+	void Put_(
+		const char *String,
+		flw::rWFlow &Flow )
 	{
-		sck::sSocket Socket = sck::Undefined;
-		const char *IP = NULL;
-	};
+		prtcl::Put( String, Flow );
+	}
 
 	namespace token_ {
 		plgn::rRetriever<plugins::cToken> PluginRetriever_;
@@ -212,19 +291,14 @@ namespace {
 				const str::dString &Raw,
 				str::dString &Normalized ) override
 			{
-				plugins::eStatus Status = plugins::sNew;
 				tol::bUUID UUID;
 
 				Normalized = Raw;
 
 				if ( Raw.Amount() == 0 )
 					Normalized.Append( tol::UUIDGen( UUID ) );
-				else if ( (Raw.Amount() > 1) && (Raw( 0 ) == '&') )
-					Normalized.Remove( Normalized.First() );
-				else
-					Status = plugins::sPending;
 
-				return Status;
+				return plugins::sOK;
 			}
 		public:
 			void reset(bso::sBool = true ) {}
@@ -245,61 +319,180 @@ namespace {
 		}
 	}
 
-	void NewConnexionRoutine_(
-		sData_ &Data,
-		mtk::gBlocker &Blocker )
+	void Notify_(
+		const char *Message,
+		flw::rWFlow &Flow )
 	{
-	qRFH;
-		sck::sSocket Socket = sck::Undefined;
-		str::wString IP;
+	qRH;
+		str::wString Notification;
+	qRB;
+		Notification.Init( Message );
+
+		if ( Notification.IsEmpty() )
+			sclmisc::OGetValue( registry_::parameter::Notification, Notification );
+
+		prtcl::Put( Notification, Flow );
+	qRR;
+	qRT;
+	qRE;
+	}
+
+	void Handshake_( fdr::rRWDriver &Driver )
+	{
+	qRH;
+		flw::rDressedRWFlow<> Flow;
+	qRB;
+		Flow.Init( Driver );
+
+		switch ( csdcmn::GetProtocolVersion( ProtocolId_, Flow ) ) {
+		case 0:
+			Put_( "", Flow );
+			Notify_( NULL, Flow );
+			Flow.Commit();
+			break;
+		case csdcmn::UndefinedVersion:
+			Put_( "Unknown demo protocol !!!", Flow );
+			Flow.Commit();
+			qRGnr();
+		default:
+			Put_( "Unknown demo version !!!", Flow );
+			Flow.Commit();
+			qRGnr();
+			break;
+		}
+	qRR;
+	qRT;
+	qRE;
+	}
+
+	rBackend_ *CreateBackend_(
+		fdr::rRWDriver &Driver,
+		const str::dString &IP )
+	{
+		rBackend_ *Backend = NULL;
+	qRH;
+		flw::rDressedRWFlow<> Flow;
 		str::wString Token, Head, ErrorMessageLabel, ErrorMessage;
-		sck::rRWFlow Flow;
-		rClient_ *Client = NULL;
-		mtx::rMutex Mutex;
 		plugins::eStatus Status = plugins::s_Undefined;
-	qRFB;
-		Socket = Data.Socket;
-		IP.Init( Data.IP );
-
-		Blocker.Release();
-
-		ErrorMessage.Init();
-
-		Flow.Init( Socket, false, sck::NoTimeout );
+	qRB;
+		Flow.Init( Driver );
 
 		Token.Init();
 		Get_( Flow, Token );
 
 		switch ( Status = token_::GetPlugin().Handle( Token ) ) {
-		case plugins::sNew:
+		case plugins::sOK:
 			Head.Init();
 			Get_( Flow, Head );
 
-			Client = Create_( Token, Head );
-			break;
-		case plugins::sPending:
-			Client = TSClientSearch_( Token );
+			Backend = Create_( Driver, IP, Token, Head );
 			break;
 		default:
-			Token.Init();
+			Token.Init();	// To report an error (see below).
 			ErrorMessageLabel.Init( "PLUGINS_" );
 			ErrorMessageLabel.Append( plugins::GetLabel( Status ) );
+			ErrorMessage.Init();
 			sclmisc::GetBaseTranslation( ErrorMessageLabel, ErrorMessage );
 			break;
 		}
 
-
-		if ( Client != NULL ) {
-			Client->Access.WriteBegin();
-			Client->Socket = Socket;
-			Client->IP.Init( IP );
-			Client->Access.WriteEnd();
-		}
-
 		Put_( Token, Flow );
 
-		if ( Token.Amount() == 0 )
+		if ( Backend == NULL )
 			Put_( ErrorMessage, Flow );
+	qRR;
+		if ( Backend != NULL )
+			delete Backend;
+
+		Backend = NULL;
+	qRT;
+	qRE;
+		return Backend;
+	}
+
+	void HandleSwitching_(
+		fdr::rRWDriver &Driver,
+		const dShareds_ &Shareds,
+		tht::rBlocker &Blocker )
+	{
+	qRH;
+		flw::rDressedRFlow<> Flow;
+		sId Id = Undefined;
+	qRB;
+		Flow.Init( Driver );
+
+		while ( true ) {
+			Id = Undefined;
+
+			Id = GetId( Flow );
+
+			if ( !Shareds.Exists( Id ) ) {
+				Id = Undefined;
+				qRGnr();
+			}
+
+			Shareds( Id )->Read.Unblock();
+
+			Blocker.Wait();	// Waits until all data in flow red.
+		}
+	qRR;
+	qRT;
+	qRE;
+	}
+
+	struct gConnectionData_
+	{
+		sck::sSocket Socket = sck::Undefined;
+		const char *IP = NULL;
+	};
+
+	void NewConnexion_(
+		gConnectionData_ &Data,
+		mtk::gBlocker &Blocker )
+	{
+	qRH;
+		sck::sSocket Socket = sck::Undefined;
+		str::wString IP;
+		mtx::rMutex Mutex;
+		sck::rRWDriver Driver;
+		rBackend_ *Backend = NULL;
+	qRB;
+		Socket = Data.Socket;
+		IP.Init( Data.IP );
+
+		Blocker.Release();
+
+		Driver.Init( Socket, false, fdr::ts_Default );
+
+		Handshake_( Driver );
+
+		if ( ( Backend = CreateBackend_( Driver, IP ) ) != NULL )
+			HandleSwitching_( Driver, Backend->Shareds, Backend->Switch );	// Don't return until disconnection or error.
+	qRR;
+	qRT;
+		if ( Backend != NULL ) {
+			Remove_( Backend->Row );
+			delete Backend;
+
+			Backend = NULL;
+		}
+
+		Driver.reset();	// Otherwise it will be done after the destruction of the socket, hence the commit will fail.
+
+		if ( Socket != sck::Undefined ) {
+			sck::Close( Socket, err::hUserDefined );	// An error occurring during closing is ignored.
+			Socket = sck::Undefined;
+		}
+	qRE( sclmisc::ErrFinal() );
+	}
+
+	void NewConnexionRoutine_(
+		gConnectionData_ &Data,
+		mtk::gBlocker &Blocker )
+	{
+	qRFH;
+	qRFB;
+	NewConnexion_( Data, Blocker );
 	qRFR;
 	qRFT;
 	qRFE( sclmisc::ErrFinal() );
@@ -308,7 +501,7 @@ namespace {
 	void ListeningRoutine_( void * )
 	{
 	qRFH;
-		sData_ Data;
+		gConnectionData_ Data;
 	qRFB;
 		while ( true ) {
 			Data.Socket = Listener_.GetConnection( Data.IP );
@@ -336,32 +529,36 @@ qRT;
 qRE;
 }
 
-sck::sSocket dmopool::GetConnection(
+bso::sBool dmopool::GetConnection(
 	const str::dString &Token,
-	str::dString &IP )
+	str::dString &IP,
+	rShared &Shared )
 {
-	sck::sSocket Socket = sck::Undefined;
-	rClient_ *Client = TSClientSearch_( Token );
+	rBackend_ *Backend = NULL;
+qRH;
+	mtx::rMutex Mutex;
+	flw::rDressedWFlow<> Flow;
+qRB;
+	Backend = TSGetBackend_( Token );
 
-	if ( Client != NULL ) {
-		if ( !Client->Access.ReadBegin( 1000 ) ) {	// Give 1 second to the client to respond.
-			Client->GiveUp = true;				// No available connections within 1 second, tells other to give up.
-			Client->Access.WriteDismiss();		// The 'ReadBegin()' from another thread will now succeed.
-			qRGnr();
-		}
+	if ( Backend != NULL ) {
+		Mutex.Init( Backend->Access );
 
-		if ( Client->GiveUp ) {	// 'ReadBegin()' succeeded, but we have were instructed to give up.
-			Client->Access.ReadEnd();	// For the following 'WriteDismiss()' to succeed.
-			Client->Access.WriteDismiss();		// The 'ReadBegin()' from another thread will now succeed.
-			qRGnr();
-		}
+		Mutex.Lock();
 
-		Socket = Client->Socket;
-		IP.Append( Client->IP );
-		Client->Access.ReadEnd();
+		if ( Backend->Set( Shared ) ) {
+			Flow.Init( *Backend->Driver );
+			IP.Append( Backend->IP );
+			PutId( Undefined, Flow );	// To signal to the back-end a new connection.
+			PutId( Shared.Id, Flow );	// The id of the new front-end.
+			Flow.Commit();
+		}  else
+			Backend = NULL;
 	}
-
-	return Socket;
+qRR;
+qRT;
+qRE;
+	return Backend != NULL;
 }
 
 namespace {
@@ -369,7 +566,7 @@ namespace {
 		void *UP,
 		str::dString &Head )
 	{
-		TSHeadSearch_( *(const str::wString *)UP, Head );	// 'UP' contains the token.
+		TSGetHead_( *(const str::wString *)UP, Head );	// 'UP' contains the token.
 	}
 }
 
@@ -379,7 +576,7 @@ qGCTOR( dmopool )
 	MutexHandler_ = mtx::Create();
 	Tokens_.Init();
 	Heads_.Init();
-	Clients_.Init();
+	Backends_.Init();
 	sclxdhtml::SetHeadFunction( GetHead_ );
 }
 
@@ -388,12 +585,12 @@ qGDTOR( dmopool )
 	if ( MutexHandler_ != mtx::Undefined )
 		mtx::Delete( MutexHandler_, true );
 
-	sRow Row = Clients_.First();
+	sBRow Row = Backends_.First();
 
 	while ( Row != qNIL ) {
-		delete Clients_( Row );
+		delete Backends_( Row );
 
-		Row = Clients_.Next( Row );
+		Row = Backends_.Next( Row );
 	}
 }
 

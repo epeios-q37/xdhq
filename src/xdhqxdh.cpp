@@ -203,7 +203,7 @@ namespace {
 	};
 
 	void Execute_(
-		flw::sRWFlow &Flow,
+		flw::rRWFlow &Flow,
 		xdhdws::sProxy &Proxy )
 	{
 	qRH;
@@ -213,11 +213,12 @@ namespace {
 		Script.Init();
 		prtcl::Get( Flow, Script );
 
-		Proxy.Execute( Script, Buffer );
-
 		Flow.Dismiss();
 
-		prtcl::Put( (char *)Buffer(), Flow );
+		Proxy.Execute( Script, Buffer );
+
+		prtcl::Put( Buffer(), Flow );
+
 		Flow.Commit();
 	qRR;
 	qRT;
@@ -225,7 +226,7 @@ namespace {
 	}
 
 	void Alert_(
-		flw::sRWFlow &Flow,
+		flw::rRWFlow &Flow,
 		xdhdws::sProxy &Proxy )
 	{
 	qRH;
@@ -234,19 +235,33 @@ namespace {
 	qRB;
 		Message.Init();
 		prtcl::Get( Flow, Message );
+
+		Flow.Dismiss();
 
 		Script.Init( "window.alert(\"");
 		xdhcmn::Escape( Message, Script, '"' );
 		Script.Append( "\");'';");
 
 		Proxy.Execute( Script, Buffer );
+
+/*
+	Despite the fact that this primitive does not need a return value,
+	an empty string is returned in order for the back-end to wait
+	that this primitive is achieved before launching another primitive.
+	Without this, all other threads of the same back-end will be blocked
+	until this primitive will return.
+*/
+
+		prtcl::Put( "", Flow );
+
+		Flow.Commit();
 	qRR;
 	qRT;
 	qRE;
 	}
 
 	void Confirm_(
-		flw::sRWFlow &Flow,
+		flw::rRWFlow &Flow,
 		xdhdws::sProxy &Proxy )
 	{
 	qRH;
@@ -255,6 +270,8 @@ namespace {
 	qRB;
 		Message.Init();
 		prtcl::Get( Flow, Message );
+
+		Flow.Dismiss();
 
 		Script.Init( "if ( window.confirm(\"");
 		xdhcmn::Escape( Message, Script, '"' );
@@ -262,9 +279,8 @@ namespace {
 
 		Proxy.Execute( Script, Buffer );
 
-		Flow.Dismiss();
+		prtcl::Put( Buffer(), Flow );
 
-		prtcl::Put( (char *)Buffer(), Flow );
 		Flow.Commit();
 	qRR;
 	qRT;
@@ -293,7 +309,7 @@ namespace {
 	}
 
 	void SetLayout_(
-		flw::sRWFlow &Flow,
+		flw::rRFlow &Flow,
 		xdhdws::sProxy &Proxy )
 	{
 	qRH;
@@ -304,6 +320,8 @@ namespace {
 		prtcl::Get( Flow, Id );
 		prtcl::Get( Flow, RawXML );
 		prtcl::Get( Flow, XSL );
+
+		Flow.Dismiss();
 
 		if ( RawXML.Amount() == 0 )
 			qRGnr();
@@ -348,7 +366,7 @@ namespace {
 	}
 
 	void GetContents_(
-		flw::sRWFlow &Flow,
+		flw::rRWFlow &Flow,
 		xdhdws::sProxy &Proxy )
 	{
 	qRH;
@@ -357,12 +375,13 @@ namespace {
 		Ids.Init();
 		prtcl::Get( Flow, Ids );
 
+		Flow.Dismiss();
+
 		Contents.Init();
 		GetContents_( Ids, Proxy, Contents );
 
-		Flow.Dismiss();
-
 		prtcl::Put( Contents, Flow );
+
 		Flow.Commit();
 	qRR;
 	qRT;
@@ -370,7 +389,7 @@ namespace {
 	}
 
 	void SetContents_(
-		flw::sRWFlow &Flow,
+		flw::rRFlow &Flow,
 		xdhdws::sProxy &Proxy )
 	{
 	qRH;
@@ -380,6 +399,8 @@ namespace {
 		tol::Init( Ids, Contents );
 		prtcl::Get( Flow, Ids );
 		prtcl::Get( Flow, Contents );
+
+		Flow.Dismiss();
 
 		tol::Init( MergedIds, MergedContents );
 
@@ -393,7 +414,7 @@ namespace {
 	}
 
 	void SetTimeout_(
-		flw::sRWFlow &Flow,
+		flw::rRFlow &Flow,
 		xdhdws::sProxy &Proxy )
 	{
 	qRH;
@@ -403,6 +424,8 @@ namespace {
 		prtcl::Get( Flow, Delay );
 		prtcl::Get( Flow, Action );
 
+		Flow.Dismiss();
+
 		Proxy.SetTimeout( Delay, Action );
 	qRR;
 	qRT;
@@ -410,7 +433,7 @@ namespace {
 	}
 
 	void Parent_(
-		flw::sRWFlow &Flow,
+		flw::rRWFlow &Flow,
 		xdhdws::sProxy &Proxy )
 	{
 	qRH;
@@ -420,11 +443,12 @@ namespace {
 		tol::Init( Id );
 		prtcl::Get( Flow, Id );
 
-		Proxy.Parent( Id, Parent );
-
 		Flow.Dismiss();
 
+		Proxy.Parent( Id, Parent );
+
 		prtcl::Put( Parent(), Flow );
+
 		Flow.Commit();
 	qRR;
 	qRT;
@@ -432,7 +456,7 @@ namespace {
 	}
 
 	void FirstChild_(
-		flw::sRWFlow &Flow,
+		flw::rRWFlow &Flow,
 		xdhdws::sProxy &Proxy )
 	{
 	qRH;
@@ -442,9 +466,9 @@ namespace {
 		tol::Init( Id );
 		prtcl::Get( Flow, Id );
 
-		Proxy.FirstChild( Id, Child );
-
 		Flow.Dismiss();
+
+		Proxy.FirstChild( Id, Child );
 
 		prtcl::Put( Child(), Flow );
 
@@ -455,7 +479,7 @@ namespace {
 	}
 
 	void LastChild_(
-		flw::sRWFlow &Flow,
+		flw::rRWFlow &Flow,
 		xdhdws::sProxy &Proxy )
 	{
 	qRH;
@@ -465,9 +489,9 @@ namespace {
 		tol::Init( Id );
 		prtcl::Get( Flow, Id );
 
-		Proxy.LastChild( Id, Child );
-
 		Flow.Dismiss();
+
+		Proxy.LastChild( Id, Child );
 
 		prtcl::Put( Child(), Flow );
 
@@ -478,7 +502,7 @@ namespace {
 	}
 
 	void PreviousSibling_(
-		flw::sRWFlow &Flow,
+		flw::rRWFlow &Flow,
 		xdhdws::sProxy &Proxy )
 	{
 	qRH;
@@ -488,9 +512,9 @@ namespace {
 		tol::Init( Id );
 		prtcl::Get( Flow, Id );
 
-		Proxy.PreviousSibling( Id, Sibling );
-
 		Flow.Dismiss();
+
+		Proxy.PreviousSibling( Id, Sibling );
 
 		prtcl::Put( Sibling(), Flow );
 
@@ -501,7 +525,7 @@ namespace {
 	}
 
 	void NextSibling_(
-		flw::sRWFlow &Flow,
+		flw::rRWFlow &Flow,
 		xdhdws::sProxy &Proxy )
 	{
 	qRH;
@@ -511,9 +535,9 @@ namespace {
 		tol::Init( Id );
 		prtcl::Get( Flow, Id );
 
-		Proxy.NextSibling( Id, Sibling );
-
 		Flow.Dismiss();
+
+		Proxy.NextSibling( Id, Sibling );
 
 		prtcl::Put( Sibling(), Flow );
 
@@ -524,7 +548,7 @@ namespace {
 	}
 
 	void CreateElement_(
-		flw::sRWFlow &Flow,
+		flw::rRWFlow &Flow,
 		xdhdws::sProxy &Proxy )
 	{
 	qRH;
@@ -536,9 +560,9 @@ namespace {
 		prtcl::Get( Flow, Name );
 		prtcl::Get( Flow, SuggestedId );
 
-		Proxy.CreateElement( Name, SuggestedId, Id );	// If 'SuggestedId' is empty, 'Id' will contain a computer generated one, otherwise it will contain 'SuggestedId'.
-
 		Flow.Dismiss();
+
+		Proxy.CreateElement( Name, SuggestedId, Id );	// If 'SuggestedId' is empty, 'Id' will contain a computer generated one, otherwise it will contain 'SuggestedId'.
 
 		prtcl::Put( Id(), Flow );
 
@@ -549,7 +573,7 @@ namespace {
 	}
 
 	void InsertChild_(
-		flw::sRWFlow &Flow,
+		flw::rRFlow &Flow,
 		xdhdws::sProxy &Proxy )
 	{
 	qRH;
@@ -559,6 +583,8 @@ namespace {
 
 		prtcl::Get( Flow, Child );
 		prtcl::Get( Flow, Id );
+
+		Flow.Dismiss();
 
 		Proxy.InsertChild( Child, Id );
 	qRR;
@@ -567,7 +593,7 @@ namespace {
 	}
 
 	void AppendChild_(
-		flw::sRWFlow &Flow,
+		flw::rRFlow &Flow,
 		xdhdws::sProxy &Proxy )
 	{
 	qRH;
@@ -578,6 +604,8 @@ namespace {
 		prtcl::Get( Flow, Child );
 		prtcl::Get( Flow, Id );
 
+		Flow.Dismiss();
+
 		Proxy.AppendChild( Child, Id );
 	qRR;
 	qRT;
@@ -585,7 +613,7 @@ namespace {
 	}
 
 	void InsertBefore_(
-		flw::sRWFlow &Flow,
+		flw::rRFlow &Flow,
 		xdhdws::sProxy &Proxy )
 	{
 	qRH;
@@ -595,6 +623,8 @@ namespace {
 
 		prtcl::Get( Flow, Sibling );
 		prtcl::Get( Flow, Id );
+
+		Flow.Dismiss();
 
 		Proxy.InsertBefore( Sibling, Id );
 	qRR;
@@ -603,7 +633,7 @@ namespace {
 	}
 
 	void InsertAfter_(
-		flw::sRWFlow &Flow,
+		flw::rRFlow &Flow,
 		xdhdws::sProxy &Proxy )
 	{
 	qRH;
@@ -614,6 +644,8 @@ namespace {
 		prtcl::Get( Flow, Sibling );
 		prtcl::Get( Flow, Id );
 
+		Flow.Dismiss();
+
 		Proxy.InsertAfter( Sibling, Id );
 	qRR;
 	qRT;
@@ -621,7 +653,7 @@ namespace {
 	}
 
 	void DressWidgets_(
-		flw::sRWFlow &Flow,
+		flw::rRFlow &Flow,
 		xdhdws::sProxy &Proxy )
 	{
 	qRH;
@@ -629,6 +661,8 @@ namespace {
 	qRB;
 		Id.Init();
 		prtcl::Get( Flow, Id );
+
+		Flow.Dismiss();
 
 		Proxy.DressWidgets( Id );
 	qRR;
@@ -638,7 +672,7 @@ namespace {
 
 	namespace {
 		void HandleClasses_(
-			flw::sRWFlow &Flow,
+			flw::rRFlow &Flow,
 			void (xdhdws::sProxy::* Method)(
 				const xdhdws::rNString &Ids,
 				const xdhdws::rNString &Classes),
@@ -653,6 +687,8 @@ namespace {
 			prtcl::Get( Flow, Ids );
 			prtcl::Get( Flow, Classes );
 
+			Flow.Dismiss();
+
 			tol::Init( MergedIds, MergedClasses );
 			xdhcmn::FlatMerge( Ids, MergedIds, true );
 			xdhcmn::FlatMerge( Classes, MergedClasses, true );
@@ -665,21 +701,21 @@ namespace {
 	}
 
 	void AddClasses_(
-		flw::sRWFlow &Flow,
+		flw::rRFlow &Flow,
 		xdhdws::sProxy &Proxy )
 	{
 		HandleClasses_( Flow, &xdhdws::sProxy::AddClasses, Proxy );
 	}
 
 	void RemoveClasses_(
-		flw::sRWFlow &Flow,
+		flw::rRFlow &Flow,
 		xdhdws::sProxy &Proxy )
 	{
 		HandleClasses_( Flow, &xdhdws::sProxy::RemoveClasses, Proxy );
 	}
 
 	void ToggleClasses_(
-		flw::sRWFlow &Flow,
+		flw::rRFlow &Flow,
 		xdhdws::sProxy &Proxy )
 	{
 		HandleClasses_( Flow, &xdhdws::sProxy::ToggleClasses, Proxy );
@@ -687,7 +723,7 @@ namespace {
 
 	namespace {
 		void HandleElements_(
-			flw::sRWFlow &Flow,
+			flw::rRFlow &Flow,
 			void (xdhdws::sProxy::* Method)( const xdhdws::rNString &Ids ),
 			xdhdws::sProxy &Proxy )
 		{
@@ -698,6 +734,8 @@ namespace {
 			tol::Init( Ids );
 
 			prtcl::Get( Flow, Ids );
+
+			Flow.Dismiss();
 
 			tol::Init( MergedIds );
 			xdhcmn::FlatMerge( Ids, MergedIds, true );
@@ -710,21 +748,21 @@ namespace {
 	}
 
 	void EnableElements_(
-		flw::sRWFlow &Flow,
+		flw::rRFlow &Flow,
 		xdhdws::sProxy &Proxy )
 	{
 		HandleElements_( Flow, &xdhdws::sProxy::EnableElements, Proxy );
 	}
 
 	void DisableElements_(
-		flw::sRWFlow &Flow,
+		flw::rRFlow &Flow,
 		xdhdws::sProxy &Proxy )
 	{
 		HandleElements_( Flow, &xdhdws::sProxy::DisableElements, Proxy );
 	}
 
 	void SetAttribute_(
-		flw::sRWFlow &Flow,
+		flw::rRFlow &Flow,
 		xdhdws::sProxy &Proxy )
 	{
 	qRH;
@@ -735,6 +773,8 @@ namespace {
 		prtcl::Get( Flow, Name );
 		prtcl::Get( Flow, Value );
 
+		Flow.Dismiss();
+
 		Proxy.SetAttribute( Id, Name, Value );
 	qRR;
 	qRT;
@@ -742,7 +782,7 @@ namespace {
 	}
 
 	void GetAttribute_(
-		flw::sRWFlow &Flow,
+		flw::rRWFlow &Flow,
 		xdhdws::sProxy &Proxy )
 	{
 	qRH;
@@ -752,10 +792,10 @@ namespace {
 		prtcl::Get( Flow, Id );
 		prtcl::Get( Flow, Name );
 
+		Flow.Dismiss();
+
 		Value.Init();
 		Proxy.GetAttribute( Id, Name, Value );
-
-		Flow.Dismiss();
 
 		prtcl::Put( Value, Flow );
 		Flow.Commit();
@@ -765,7 +805,7 @@ namespace {
 	}
 
 	void RemoveAttribute_(
-		flw::sRWFlow &Flow,
+		flw::rRFlow &Flow,
 		xdhdws::sProxy &Proxy )
 	{
 	qRH;
@@ -775,6 +815,8 @@ namespace {
 		prtcl::Get( Flow, Id );
 		prtcl::Get( Flow, Name );
 
+		Flow.Dismiss();
+
 		Proxy.RemoveAttribute( Id, Name );
 	qRR;
 	qRT;
@@ -782,7 +824,7 @@ namespace {
 	}
 
 	void SetProperty_(
-		flw::sRWFlow &Flow,
+		flw::rRFlow &Flow,
 		xdhdws::sProxy &Proxy )
 	{
 	qRH;
@@ -793,6 +835,8 @@ namespace {
 		prtcl::Get( Flow, Name );
 		prtcl::Get( Flow, Value );
 
+		Flow.Dismiss();
+
 		Proxy.SetProperty( Id, Name, Value );
 	qRR;
 	qRT;
@@ -800,7 +844,7 @@ namespace {
 	}
 
 	void GetProperty_(
-		flw::sRWFlow &Flow,
+		flw::rRWFlow &Flow,
 		xdhdws::sProxy &Proxy )
 	{
 	qRH;
@@ -810,12 +854,13 @@ namespace {
 		prtcl::Get( Flow, Id );
 		prtcl::Get( Flow, Name );
 
+		Flow.Dismiss();
+
 		Value.Init();
 		Proxy.GetProperty( Id, Name, Value );
 
-		Flow.Dismiss();
-
 		prtcl::Put( Value, Flow );
+
 		Flow.Commit();
 	qRR;
 	qRT;
@@ -823,7 +868,7 @@ namespace {
 	}
 
 	void Focus_(
-		flw::sRWFlow &Flow,
+		flw::rRFlow &Flow,
 		xdhdws::sProxy &Proxy )
 	{
 	qRH;
@@ -831,6 +876,8 @@ namespace {
 	qRB;
 		tol::Init( Id );
 		prtcl::Get( Flow, Id );
+
+		Flow.Dismiss();
 
 		Proxy.Focus( Id );
 	qRR;
@@ -851,7 +898,7 @@ namespace {
 	{
 	private:
 		eMode_ Mode_;
-		sck::rRWDriver DemoDriver_;
+		dmopool::rRWDriver DemoDriver_;
 		csdmnc::rRWDriver ProdDriver_;
 		struct {
 			sId_ Id;
@@ -871,7 +918,17 @@ namespace {
 				break;
 			}
 
+#ifdef CPE_C_CLANG
+# pragma clang diagnostic push
+# pragma clang diagnostic ignored "-Wnull-dereference"
+#endif
+
 			return *(fdr::rRWDriver *)NULL;	// To avoid a warning.
+
+#ifdef CPE_C_CLANG
+# pragma clang diagnostic pop
+#endif
+
 		}
 		void Log_( const str::dString &Message )
 		{
@@ -890,75 +947,32 @@ namespace {
 		qRT;
 		qRE;
 		}
-	protected:
-		virtual void XDHCMNInitialize(
-			xdhcmn::cUpstream *Callback,
-			const str::dString &Language,
-			const str::dString &Token ) override
+		void ReportError_(
+			const char *Message,
+			flw::rWFlow &Flow )
 		{
-			bso::sBool Success = false;
-		qRH;
-			flw::sDressedRWFlow<> Flow;
-			csdcmn::sVersion Version = csdcmn::UndefinedVersion;
-			str::wString LogMessage;
-		qRB;
-			LogMessage.Init();
+			if ( Message == NULL )
+				Message = "";
 
-			if ( Token.Amount() == 0 ) {
-				ProdDriver_.Init( Core_, fdr::ts_Default );
-				Mode_ = mProd;
-				Success = true;
-				LogMessage.Append( "PROD" );
-			} else {
-				LogMessage.Append( Token );
-				sck::sSocket Socket = dmopool::GetConnection( Token, Logging_.IP );
+			prtcl::Put( Message, Flow );	// If 'Message' not empty, client will display content and abort.
 
-				if ( Socket != sck::Undefined ) {
-					DemoDriver_.Init(Socket, true, fdr::ts_Default );
-					Mode_ = mDemo;
-					Success = true;
-				}
-			}
-
-			LogMessage.Append( " - " );
-
-			if ( Success ) {
-				Flow.Init( D_() );
-
-				Version = csdcmn::GetProtocolVersion( prtcl::ProtocolId, Flow );
-
-				switch ( Version ) {
-				case 0:
-					ReportNoError_( Flow );
-					break;
-				default:
-					ReportError_( "Unknown protocol version !!!", Flow );
-					break;
-				}
-
-				prtcl::Put( Language, Flow );
+			if ( Message[0] ) {
 				Flow.Commit();
-
-				csdcmn::Get( Flow, LogMessage );
-
-				Logging_.Id = Ids_.New();
-				Log_( LogMessage );
-
-				xdhdws::sProxy::Init( Callback );	// To be last, otherwise if an error occurs, 'Callback' will be freed twice!
+				qRGnr();
 			}
-		qRR;
-		qRT;
-		qRE;
-//			return Success;
 		}
-		virtual bso::bool__ XDHCMNLaunch(
+		void ReportNoError_( flw::rWFlow &Flow )
+		{
+			ReportError_( NULL, Flow );
+		}
+		bso::bool__ Launch_(
 			const char *Id,
-			const char *Action ) override
+			const char *Action )
 		{
 			bso::sBool Return = false;
 		qRH;
 			bso::sBool Continue = true;
-			flw::sDressedRWFlow<> Flow;
+			flw::rDressedRWFlow<> Flow;
 			eCommand_ Command = c_Undefined;
 		qRB;
 			Flow.Init( D_() );
@@ -1018,31 +1032,92 @@ namespace {
 					break;
 				}
 			}
-
 #undef H
-
 		qRR;
 		qRT;
 		qRE;
 			return Return;
-	}
-		void ReportError_(
-			const char *Message,
-			flw::sWFlow &Flow )
-		{
-			if ( Message == NULL )
-				Message = "";
-
-			prtcl::Put( Message, Flow );	// If 'Message' not empty, client will display content and abort.
-
-			if ( Message[0] ) {
-				Flow.Commit();
-				qRGnr();
-			}
 		}
-		void ReportNoError_( flw::sWFlow &Flow )
+	protected:
+		virtual bso::sBool XDHCMNInitialize(
+			xdhcmn::cUpstream *Callback,
+			const str::dString &Language,
+			const str::dString &Token ) override
 		{
-			ReportError_( NULL, Flow );
+			bso::sBool Success = false;
+		qRFH;
+			flw::rDressedRWFlow<> Flow;
+			csdcmn::sVersion Version = csdcmn::UndefinedVersion;
+			str::wString LogMessage;
+		qRFB;
+			LogMessage.Init();
+
+			if ( Token.Amount() == 0 ) {
+				ProdDriver_.Init( Core_, fdr::ts_Default );
+				Mode_ = mProd;
+				Success = true;
+				LogMessage.Append( "PROD" );
+			} else {
+				LogMessage.Append( Token );
+
+				DemoDriver_.Init();
+
+				if ( dmopool::GetConnection( Token, Logging_.IP, DemoDriver_.GetShared() ) ) {
+					Mode_ = mDemo;
+					Success = true;
+				}
+			}
+
+			LogMessage.Append( " - " );
+
+			if ( Success ) {
+				Flow.Init( D_() );
+
+				Version = csdcmn::GetProtocolVersion( prtcl::ProtocolId, Flow );
+				Flow.Dismiss();
+
+				switch ( Version ) {
+				case 0:
+					ReportNoError_( Flow );
+					break;
+				case 1:
+					ReportNoError_( Flow );
+					break;
+				case csdcmn::UndefinedVersion:
+					ReportError_( "Unknown protocol !!!", Flow );
+					break;
+				default:
+					ReportError_( "Unknown protocol version !!!", Flow );
+					break;
+				}
+
+				prtcl::Put( "", Flow );
+				Flow.Commit();
+
+				csdcmn::Get( Flow, LogMessage );
+
+				Logging_.Id = Ids_.New();
+				Log_( LogMessage );
+
+				xdhdws::sProxy::Init( Callback );	// Has to be last, otherwise if an error occurs, 'Callback' will be freed twice!
+			}
+		qRR;
+		qRT;
+		qRE;
+			return Success;
+		}
+		virtual bso::bool__ XDHCMNLaunch(
+			const char *Id,
+			const char *Action ) override
+		{
+			bso::sBool Return = false;
+		qRFH;
+		qRFB;
+			Return = Launch_( Id, Action );
+		qRFR;
+		qRFT;
+		qRFE(sclmisc::ErrFinal());
+			return Return;
 		}
 	public:
 		void reset( bso::sBool P = true )
@@ -1054,7 +1129,7 @@ namespace {
 			Logging_.IP.reset( P );
 		}
 		qCVDTOR( rSession_ )
-		bso::sBool Init( void )	// If empty, PROD session, else token used for the DEMO session.
+		bso::sBool Init( void )
 		{
 			tol::reset( DemoDriver_, ProdDriver_ );
 			Mode_ = m_Undefined;

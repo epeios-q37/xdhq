@@ -7,6 +7,11 @@
    <HostService>localhost:53752</HostService>
    <DemoService>53800</DemoService>
    <Plugins/>
+   <DemoNotification>
+****************************************************************************
+     Your application is connected to the free public server. Welcome !
+****************************************************************************
+			</DemoNotification>
   </Parameters>
   <Definitions>
    <Plugins target="Token">

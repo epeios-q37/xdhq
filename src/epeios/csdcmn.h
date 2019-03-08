@@ -53,7 +53,7 @@ namespace csdcmn {
 	// Facilities.
 
 	inline const str::dString &Get_(
-		flw::sRFlow &Flow,
+		flw::rRFlow &Flow,
 		str::dString &String )
 	{
 		bso::sSize Size = 0;
@@ -67,14 +67,14 @@ namespace csdcmn {
 	}
 
 	inline const str::dString &Get(
-		flw::sRFlow &Flow,
+		flw::rRFlow &Flow,
 		str::dString &String )
 	{
 		return Get_( Flow, String );
 	}
 
 	inline const str::dString &Get(
-		flw::sRFlow &Flow,
+		flw::rRFlow &Flow,
 		str::wString &String )
 	{
 		return Get_( Flow, String );
@@ -82,7 +82,7 @@ namespace csdcmn {
 
 	inline void Put_(
 		const str::dString &String,
-		flw::sWFlow &Flow )
+		flw::rWFlow &Flow )
 	{
 		dtfptb::VPut( String.Amount(), Flow );
 
@@ -97,80 +97,94 @@ namespace csdcmn {
 
 	inline void Put(
 		const str::dString &String,
-		flw::sWFlow &Flow )
+		flw::rWFlow &Flow )
 	{
 		return Put_( String, Flow );
 	}
 
 	inline void Put(
 		const str::wString &String,
-		flw::sWFlow &Flow )
+		flw::rWFlow &Flow )
 	{
 		return Put_( String, Flow );
 	}
 
 	inline void Put(
 		const char *String,
-		flw::sWFlow &Flow )
+		flw::rWFlow &Flow )
 	{
 		return Put_( str::wString( String ), Flow );
 	}
 
 	inline void Put(
 		char *String,
-		flw::sWFlow &Flow )
+		flw::rWFlow &Flow )
 	{
 		return Put( (const char *)String, Flow );
 	}
 
 	void Put_(
 		const str::dStrings &Strings,
-		flw::sWFlow &Flow );
+		flw::rWFlow &Flow );
 
 	inline void Put(
 		const str::dStrings &Strings,
-		flw::sWFlow &Flow )
+		flw::rWFlow &Flow )
 	{
 		return Put_( Strings, Flow );
 	}
 
 	inline void Put(
 		const str::wStrings &Strings,
-		flw::sWFlow &Flow )
+		flw::rWFlow &Flow )
 	{
 		return Put_( Strings, Flow );
 	}
 
 	void Get_(
-		flw::sRFlow &Flow,
+		flw::rRFlow &Flow,
 		str::dStrings &Strings );
 
 	inline void Get(
-		flw::sRFlow &Flow,
+		flw::rRFlow &Flow,
 		str::dStrings &Strings )
 	{
 		Get_( Flow, Strings );
 	}
 
 	inline void Get(
-		flw::sRFlow &Flow,
+		flw::rRFlow &Flow,
 		str::wStrings &Strings )
 	{
 		Get_( Flow, Strings );
 	}
 
-	template <typename integer> void Put(
+	template <typename integer> inline void Put(
 		integer Integer,
-		flw::sWFlow &Flow )
+		flw::rWFlow &Flow )
 	{
 		return dtfptb::VPut( Integer, Flow );
 	}
 
-	template <typename integer> integer Get(
-		flw::sRFlow &Flow,
+	template <typename integer> inline void Put(
+		integer Integer,
+		fdr::rWDriver &Driver )
+	{
+		return dtfptb::VPut( Integer, Driver );
+	}
+
+	template <typename integer> inline integer Get(
+		flw::rRFlow &Flow,
 		integer &Integer )
 	{
 		return dtfptb::VGet( Flow, Integer );
+	}
+
+	template <typename integer> inline integer Get(
+		fdr::rRDriver &Driver,
+		integer &Integer )
+	{
+		return dtfptb::VGet( Driver, Integer );
 	}
 }
 

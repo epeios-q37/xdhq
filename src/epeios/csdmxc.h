@@ -358,7 +358,7 @@ qRE
 	private:
 		void *UP_;
 		qRMV( rCore, C_, Core_ );
-		flw::sDressedRWFlow<> Flow_;
+		flw::rDressedRWFlow<> Flow_;
 		rDriver_ &Driver_( void )
 		{
 			if ( UP_ == NULL )
@@ -410,7 +410,7 @@ qRE
 		qRR;
 		qRT;
 			if ( Unlocked )
-				Flow_.IDriver().Unlock();
+				Flow_.IDriver().Unlock( err::h_Default );
 		qRE;
 			return Return;
 		}
@@ -444,21 +444,24 @@ qRE
 		qRE
 			return Amount;
 		}
-		virtual void FDRCommit( bso::sBool Unlock ) override
+		virtual bso::sBool FDRCommit(
+			bso::sBool Unlock,
+			qRPN ) override
 		{
 		qRH
 		qRB
 			if ( UP_ != NULL )
-				if ( !Commit_( Unlock ) )
+				if ( !Commit_( Unlock ) )	// This 'Commit_' is specific to this object.
 					GiveUp_();
 		qRR
 			GiveUp_();
 		qRT
 		qRE
+			return true;
 		}
-		virtual fdr::sTID FDROTake( fdr::sTID Owner ) override
+		virtual fdr::sTID FDRWTake( fdr::sTID Owner ) override
 		{
-			 return Driver_().OTake( Owner );
+			 return Driver_().WTake( Owner );
 		}
 		virtual fdr::size__ FDRRead(
 			fdr::size__ Maximum,
@@ -466,8 +469,11 @@ qRE
 		{
 			fdr::size__ Amount = 0;
 		qRH
-			qRB
+		qRB
 			if ( Core_ != NULL ) {
+				if ( !Prepare_() )
+					Commit_( false );
+
 				Amount = Flow_.ReadUpTo( Maximum, Buffer );
 
 				if ( Amount == 0 )
@@ -479,12 +485,15 @@ qRE
 		qRE
 			return Amount;
 		}
-		virtual void FDRDismiss( bso::sBool Unlock ) override
+		virtual bso::sBool FDRDismiss(
+			bso::sBool Unlock,
+			qRPN ) override
 		{
+			bso::sBool Success = true;
 		qRH
 		qRB
 			if ( UP_ != NULL ) {
-				Driver_().Dismiss( Unlock );
+				Success = Driver_().Dismiss( Unlock, ErrHandling );
 				C_().Release( UP_ );
 			}
 
@@ -493,10 +502,11 @@ qRE
 			GiveUp_();
 		qRT
 		qRE
+			return Success;
 		}
-		virtual fdr::sTID FDRITake( fdr::sTID Owner ) override
+		virtual fdr::sTID FDRRTake( fdr::sTID Owner ) override
 		{
-			 return Driver_().ITake( Owner );
+			 return Driver_().RTake( Owner );
 		}
 		public:
 			void reset( bso::bool__ P = true )

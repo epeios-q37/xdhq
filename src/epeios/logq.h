@@ -66,7 +66,9 @@ namespace logq {
 
 			return Maximum;
 		}
-		virtual void FDRCommit( bso::sBool Unlock ) override
+		virtual bso::sBool FDRCommit(
+			bso::sBool Unlock,
+			qRPN ) override
 		{
 			tol::bDate Date;
 			tol::bTime Time;
@@ -80,7 +82,8 @@ namespace logq {
 
 				if ( Changed_ ) {
 					LTFlow_ << txf::nl;
-					LTFlow_.Commit( Unlock );
+					if ( !LTFlow_.Commit( Unlock, ErrHandling ) )
+						return false;
 				}
 
 				LTFlow_ << '(';
@@ -122,12 +125,13 @@ namespace logq {
 
 				Pos_ = 0;
 
-				LTFlow_.Commit( Unlock );
-			}
+				return LTFlow_.Commit( Unlock, ErrHandling );
+			} else
+				return true;
 		}
-		virtual fdr::sTID FDROTake( fdr::sTID Owner ) override
+		virtual fdr::sTID FDRWTake( fdr::sTID Owner ) override
 		{
-			return LTFlow_.Flow().ODriver().OTake( Owner );
+			return LTFlow_.Flow().ODriver().WTake( Owner );
 		}
 	public:
 		void reset( bso::sBool P = true )
@@ -155,7 +159,7 @@ namespace logq {
 	{
 	private:
 		rFDriver<> Driver_;
-		flw::sDressedWFlow<> OFlow_;
+		flw::rDressedWFlow<> OFlow_;
 	public:
 		void reset( bso::sBool P = true )
 		{
@@ -175,7 +179,7 @@ namespace logq {
 	: public rTFlow_
 	{
 	private:
-		flw::sDressedWFlow<> OFlow_;
+		flw::rDressedWFlow<> OFlow_;
 	public:
 		void reset( bso::sBool P = true )
 		{

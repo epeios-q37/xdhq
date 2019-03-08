@@ -87,15 +87,18 @@ namespace ltf {
 
 			return Maximum;
 		}
-		virtual void FDRCommit( bso::sBool Unlock ) override
+		virtual bso::sBool FDRCommit(
+			bso::sBool Unlock,
+			qRPN ) override
 		{
 			_TF().Put(_Data, _Amount );
 			_Amount = 0;
-			_TF().Commit( Unlock );
+
+			return _TF().Commit( Unlock, ErrHandling );
 		}
-		virtual fdr::sTID FDROTake( fdr::sTID Owner ) override
+		virtual fdr::sTID FDRWTake( fdr::sTID Owner ) override
 		{
-			return _TF().Flow().ODriver().OTake( Owner );
+			return _TF().Flow().ODriver().WTake( Owner );
 		}
 	public:
 		void reset( bso::bool__ P = true )
