@@ -67,6 +67,9 @@ namespace {
 		cAppendChild_1,
 		cInsertBefore_1,
 		cInsertAfter_1,
+		cInsertCSSRule_1,
+		cAppendCSSRule_1,
+		cRemoveCSSRule_1,
 		cDressWidgets_1,
 		cAddClasses_1,
 		cRemoveClasses_1,
@@ -108,6 +111,9 @@ namespace {
 			C( AppendChild_1 );
 			C( InsertBefore_1 );
 			C( InsertAfter_1 );
+			C( InsertCSSRule_1);
+			C( AppendCSSRule_1);
+			C( RemoveCSSRule_1);
 			C( DressWidgets_1 );
 			C( AddClasses_1 );
 			C( RemoveClasses_1 );
@@ -652,6 +658,72 @@ namespace {
 	qRE;
 	}
 
+	void InsertCSSRule_(
+		flw::rRFlow &Flow,
+		xdhdws::sProxy &Proxy)
+	{
+	qRH;
+		str::wString Id, Rule, Index;
+	qRB;
+		tol::Init(Id, Rule, Index);
+
+		prtcl::Get(Flow, Id);
+		prtcl::Get(Flow, Rule);
+		prtcl::Get(Flow, Index);
+
+		Flow.Dismiss();
+
+		Proxy.InsertCSSRule(Id, Rule, Index);
+	qRR;
+	qRT;
+	qRE;
+	}
+
+	void AppendCSSRule_(
+		flw::rRWFlow &Flow,
+		xdhdws::sProxy &Proxy)
+	{
+	qRH;
+		str::wString Id, Rule;
+		qCBUFFERr Index;
+	qRB;
+		tol::Init(Id, Rule);
+
+		prtcl::Get(Flow, Id);
+		prtcl::Get(Flow, Rule);
+
+		Flow.Dismiss();
+
+		Proxy.AppendCSSRule(Id, Rule, Index);
+
+		prtcl::Put(Index(), Flow);
+
+		Flow.Commit();
+	qRR;
+	qRT;
+	qRE;
+	}
+
+	void RemoveCSSRule_(
+		flw::rRFlow &Flow,
+		xdhdws::sProxy &Proxy)
+	{
+	qRH;
+		str::wString Id, Index;
+	qRB;
+		tol::Init(Id, Index);
+
+		prtcl::Get(Flow, Id);
+		prtcl::Get(Flow, Index);
+
+		Flow.Dismiss();
+
+		Proxy.RemoveCSSRule(Id, Index);
+	qRR;
+	qRT;
+	qRE;
+	}
+
 	void DressWidgets_(
 		flw::rRFlow &Flow,
 		xdhdws::sProxy &Proxy )
@@ -1015,6 +1087,9 @@ namespace {
 				H( AppendChild );
 				H( InsertBefore );
 				H( InsertAfter );
+				H( InsertCSSRule);
+				H( AppendCSSRule);
+				H( RemoveCSSRule);
 				H( DressWidgets );
 				H( AddClasses );
 				H( RemoveClasses );

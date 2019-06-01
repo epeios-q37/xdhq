@@ -205,49 +205,28 @@ namespace xdhdws {
 		{
 			C_().Process( xdhcmn::fInsertAfter, NULL, Sibling.Internal()(), Id.Internal()() );
 		}
-		/*
 		void InsertCSSRule(
+			const rNString &Id,
 			const rNString &Rule,
-			xdhcmn::sIndex Index )
+			const rNString &Index)
 		{
-		qRH;
-			rNString SBuffer;
-			bso::bInteger IBuffer;
-		qRB;
-			SBuffer.Init( bso::Convert( *Index, IBuffer ) );
-			C_().Process( xdhcmn::fInsertCSSRule, NULL, Rule.Internal()(), SBuffer.Internal()() );
-		qRR;
-		qRT;
-		qRE;
+			C_().Process( xdhcmn::fInsertCSSRule, NULL, Id.Internal()(), Rule.Internal()(), Index.Internal()() );
 		}
-		xdhcmn::sIndex AppendCSSRule( const rNString &Rule )
+		const char *AppendCSSRule(
+			const rNString &Id,
+			const rNString &Rule,
+			qCBUFFERr &Buffer )
 		{
-			xdhcmn::sIndex Index = 0;
-		qRH;
-			TOL_CBUFFER___ Buffer;
-		qRB;
-			C_().Process( xdhcmn::fAppendCSSRule, &Buffer, Rule.Internal()() );
+			C_().Process( xdhcmn::fAppendCSSRule, &Buffer, Id.Internal()(), Rule.Internal()() );
 
-			str::wString( Buffer ).ToNumber( *Index );
-		qRR;
-		qRT;
-		qRE;
-			return Index;
+			return Buffer;
 		}
-		void RemoveCSSRule( xdhcmn::sIndex Index )
+		void RemoveCSSRule(
+			const rNString &Id,
+			const rNString &Index)
 		{
-		qRH;
-			rNString SBuffer;
-			bso::bInteger Buffer;
-		qRB;
-			SBuffer.Init( bso::Convert( *Index, Buffer ) );
-
-			C_().Process( xdhcmn::fRemoveCSSRule, NULL, SBuffer.Internal()() );
-		qRR;
-		qRT;
-		qRE;
+			C_().Process( xdhcmn::fRemoveCSSRule, NULL, Id.Internal()(), Index.Internal()() );
 		}
-		*/
 		void AddClasses(
 			const rNString &Ids,
 			const rNString &Classes )

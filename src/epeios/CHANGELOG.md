@@ -2,11 +2,21 @@
 
 ## *Shortcuts*
 
-- [adpt]: Adaptation to changes in underlying modules;
-- [ctnd]: continued;
+- [adpt]: adaptation to changes in underlying modules;
+- [cont]: continuation of previous modifications;
 - [rvrt]: reverting modifications;
 - [stdz]: modification to comply with current standards;
 - [trvl]: trivial modifications;
+
+## 2019-06-01
+
+- XDHDWS, XDHUJ(P|S):
+	- adding the *id* parameter to CSS rules related functionnalities,
+
+## 2019-05-31
+
+- XDH(CMN|DWS), XDHUJ(P|R|S):
+	- reactivating CSS rules related functionnalities,
 
 ## 2019-03-26
 
@@ -17,7 +27,7 @@
 - FLW:
 	- introducing `Get(…)` and `Skip(…)` returning a flag instead throwing an exception when an error occurs.
 - SCK:
-	- [ctnd],
+	- [cont],
 
 ## 2019-03-25
 
@@ -3509,7 +3519,7 @@
 ## Notes
 
 [adpt]:#Adaptation
-[ctnd]:#Continued
+[cont]:#Continuation
 [rvrt]:#Reverting
 [stdz]:#Standardization
 [trvl]:#Trivial
@@ -3518,7 +3528,7 @@
 
 Adaptation to changes in underlying modules.
 
-### Continued
+### Continuation,
 
 Continuation of the modifications.
 
