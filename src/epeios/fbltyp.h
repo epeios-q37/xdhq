@@ -17,10 +17,10 @@
 	along with the Epeios framework.  If not, see <http://www.gnu.org/licenses/>
 */
 
-//D Frontend/Backend Layout TYPes 
+//D Frontend/Backend Layout TYPes
 
-#ifndef FBLTYP__INC
-# define FBLTYP__INC
+#ifndef FBLTYP_INC_
+# define FBLTYP_INC_
 
 # define FBLTYP_NAME		"FBLTYP"
 
@@ -136,18 +136,18 @@
 
 namespace fbltyp {
 	//t Value.
-	typedef str::string_ value_;
-	typedef str::string value;
+	typedef str::dString value_;
+	typedef str::wString value;
 
 	template <class id> class _item_
 	{
 	public:
-		value_ Value;
 		struct s
 		{
 			value_::s Value;
 			id ID;
 		} &S_;
+		value_ Value;
 		_item_( s &S )
 		: S_( S ),
 		  Value( S.Value )
@@ -190,25 +190,25 @@ namespace fbltyp {
 			return S_.ID;
 		}
 		//f 'ID' becomes the ID.
-		void ID( id ID ) 
+		void ID( id ID )
 		{
 			S_.ID = ID;
 		}
 	};
 
 	//f Values.
-	typedef ctn::E_MCONTAINER_( value_ ) values_;
-	E_AUTO( values )
+	typedef str::dStrings values_;
+	typedef str::wStrings values;
 
 	template <class id> class _extended_item_
 	{
 	public:
-		values_ Values;
 		struct s
 		{
 			values_::s Values;
 			id ID;
 		} &S_;
+		values_ Values;
 		_extended_item_( s &S )
 		: S_( S ),
 		  Values( S.Values )
@@ -239,7 +239,7 @@ namespace fbltyp {
 			return S_.ID;
 		}
 		//f 'ID' becomes the ID.
-		void ID( id ID ) 
+		void ID( id ID )
 		{
 			S_.ID = ID;
 		}
@@ -329,11 +329,11 @@ namespace fbltyp {
 	typedef uint_t__ uint__;
 	FBLTYP_S( uint )
 
-	typedef bso::sSBig sbig_t__;
+	typedef bso::sSHuge sbig_t__;
 	typedef sbig_t__ sbig__;
 	FBLTYP_S( sbig )
 
-	typedef bso::sUBig ubig_t__;
+	typedef bso::sUHuge ubig_t__;
 	typedef ubig_t__ ubig__;
 	FBLTYP_S( ubig )
 
@@ -542,7 +542,7 @@ namespace fbltyp {
 	}
 
 	FBLTYP_S( Object, object__ )
-	
+
 	//f Put 'Boolean' into 'OFlow'.
 	inline void PutBoolean(
 		boolean__ Boolean,
@@ -560,7 +560,7 @@ namespace fbltyp {
 	}
 
 	FBLTYP_S( Boolean, boolean__ )
-	
+
 	//f Put 'Booleans' into 'OFlow'.
 	void PutBooleans(
 		const booleans_ &Booleans,
@@ -589,7 +589,7 @@ namespace fbltyp {
 	{
 		_StraightGet( IFlow, Int );
 	}
-	
+
 	FBLTYP_S( SInt, sint__ )
 
 	//f Put 'SInts' into 'Flow'.
@@ -619,7 +619,7 @@ namespace fbltyp {
 	{
 		_StraightGet( IFlow, Int );
 	}
-	
+
 	FBLTYP_S( UInt, uint__ )
 
 	//f Put 'UInts' into 'Flow'.
@@ -651,7 +651,7 @@ namespace fbltyp {
 	{
 		_StraightGet( IFlow, Big );
 	}
-	
+
 	FBLTYP_S( SBig, sbig__ )
 
 	//f Put 'SBigs' into 'Flow'.
@@ -681,7 +681,7 @@ namespace fbltyp {
 	{
 		_StraightGet( IFlow, Big );
 	}
-	
+
 	FBLTYP_S( UBig, ubig__ )
 
 	//f Put 'UBigs' into 'Flow'.
@@ -713,7 +713,7 @@ namespace fbltyp {
 	{
 		dtfptb::FGet( IFlow, *Id8 );
 	}
-	
+
 	FBLTYP_S( Id8, id8__ )
 
 	//f Put 'Id8s' into 'OFlow'.
@@ -755,7 +755,7 @@ namespace fbltyp {
 	{
 		_AdjustingDGet( IFlow, Id16 );
 	}
-	
+
 	FBLTYP_S( Id16, id16__ )
 
 	//f Put 'Id16s' into 'OFlow'.
@@ -798,7 +798,7 @@ namespace fbltyp {
 	{
 		_AdjustingDGet( IFlow, Id32 );
 	}
-	
+
 	FBLTYP_S( Id32, id32__ )
 
 	//f Put 'Id32s' into 'OFlow'.
@@ -839,7 +839,7 @@ namespace fbltyp {
 	{
 		_AdjustingDGet( IFlow, Id64 );
 	}
-	
+
 	FBLTYP_S( Id64, id64__ )
 
 	//f Put 'Id64s' into 'OFlow'.
@@ -866,7 +866,7 @@ namespace fbltyp {
 
 	FBLTYP_D( XId64s, xid64s )
 
-		
+
 	//f Put 'Id' into 'OFlow'.
 	inline void PutId(
 		id__ Id,
@@ -882,7 +882,7 @@ namespace fbltyp {
 	{
 		_AdjustingDGet( IFlow, Id );
 	}
-	
+
 	FBLTYP_S( Id, id__ )
 
 	//f Put 'Ids' into 'OFlow'.
@@ -984,7 +984,7 @@ namespace fbltyp {
 	{
 		dtfptb::FGet( IFlow, Byte );
 	}
-	
+
 	FBLTYP_S( Byte, byte__ )
 
 	//f Put 'Binary' into 'OFlow'.
@@ -1107,7 +1107,7 @@ namespace fbltyp {
 		item64s_ &Item64s );
 
 	FBLTYP_D( Item64s, item64s )
-	
+
 	//f Put 'Item' into 'OFlow'.
 	void PutItem(
 		const item_ Item,
@@ -1182,7 +1182,7 @@ namespace fbltyp {
 
 	FBLTYP_D( XItem64s, xitem64s )
 
-	
+
 		//f Put 'XItems' into 'OFlow'.
 	void PutXItems(
 		const xitems_ &XItems,

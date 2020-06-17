@@ -38,17 +38,17 @@ mods += stkcrt stkctn str strng stsfsm
 mods += tagsbs tht thtsub tol txf 
 mods += tys uys utf xml xpp 
 mods += xtf llio dlbrry plgn plgncore 
-mods += strmrg cdgurl cnvfdr logq ltf 
-mods += sck 
+mods += cdgurl cnvfdr logq ltf sck 
+mods += strmrg 
 mods += csdrcc csdbnc csdbns csdcmn csdmnc 
 mods += csdmxb csdmxc csdscb 
 mods += fblcmd fblcst fblfep fblfph fblfrd 
 mods += fblfrp fblovl fbltyp 
-mods += sclargmnt scli sclmisc sclerror scllocale 
-mods += sclrgstry sclxdhtml sclfrntnd 
-mods += xdhcmn xdhdws 
-mods += plugins 
-mods += dmopool registry prtcl 
+mods += scla scli sclm scle scll 
+mods += sclr sclf 
+mods += xdhcdc xdhcmn xdhcuc xdhdws xdhutl 
+mods += plugins prtcl 
+mods += common faaspool registry session 
 
 pmods += pllio 
 
@@ -69,8 +69,6 @@ CXXFLAGS += -O
 
 ###############################
 	
-copt += -DQ37_LIBRARY
-
 win=win
 win32=win32
 win64=win64
@@ -84,7 +82,7 @@ MacOS=Darwin
 Android=Android
 os=$(shell uname -o 2>/dev/null || uname -s)
 mach=$(shell uname -m)
-ifdef EPEIOS_SRC
+ifdef Q37_EPEIOS
  src += :..
  src += :../..
 endif
@@ -399,15 +397,15 @@ ifeq ("$(target)","$(Android)")
 	rm -rf *.d
 endif
 
-copt += -DVERSION=\""20190706"\"
+copt += -DVERSION=\""20200615"\"
 copt += -DCOPYRIGHT_YEARS=\""2017"\"
 copt += -DIDENTIFIER=\""5f3ad6c6-4f0d-428d-9c00-678e1ed3967f"\"
 
-ifndef EPEIOS_SRC
+ifndef Q37_EPEIOS
 	src += :src:src/epeios
 	out = ./
 else
-	src += :$(EPEIOS_SRC)
+	src += :$(Q37_EPEIOS)
 	out = $(dest)
 endif
 
@@ -427,7 +425,7 @@ objs = $(name).$(ox) $(mods:=.$(ox))
 
 $(binary): $(objs)
 	$(CXX) $(lo) $(libs) $(LDFLAGS)
-ifdef EPEIOS_SRC			
+ifdef Q37_EPEIOS			
 	mkdir -p $(out)
 	cp $(binary) $(out)
 endif

@@ -30,10 +30,8 @@
 
 
 namespace prtcl {
-	static qCDEF( char *, ProtocolId, "6e010737-31d8-4be3-9195-c5b5b2a9d5d9" );
+	static qCDEF( char *, ProtocolId, "bf077e9f-baca-48a1-bd3f-bf5181a78666" );
 	qCDEF( bso::sU8, ProtocolVersion, 0 );
-
-	static qCDEF( char *, StandBy, "StandBy_1" );	// Send as command to report that there is no more command to handle.
 
 	using csdcmn::Put;
 	using csdcmn::Get;

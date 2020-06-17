@@ -17,7 +17,7 @@
 	along with the Epeios framework.  If not, see <http://www.gnu.org/licenses/>
 */
 
-#define FBLTYP__COMPILATION
+#define FBLTYP_COMPILATION_
 
 #include "fbltyp.h"
 
@@ -112,7 +112,7 @@ M( Id16, id16 );
 M( Id32, id32 );
 M( Id, id );
 M( Boolean, boolean );
-M( Object, object );
+// M( Object, object );
 
 namespace {
 	template <typename s> inline void PutSet_(

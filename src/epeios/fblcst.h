@@ -17,10 +17,10 @@
 	along with the Epeios framework.  If not, see <http://www.gnu.org/licenses/>
 */
 
-// Frontend/Backend Layout CaSTs 
+// Frontend/Backend Layout CaSTs
 
-#ifndef FBLCST__INC
-# define FBLCST__INC
+#ifndef FBLCST_INC_
+# define FBLCST_INC_
 
 # define FBLCST_NAME		"FBLCST"
 

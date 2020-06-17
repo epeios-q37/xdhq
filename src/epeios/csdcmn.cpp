@@ -17,7 +17,7 @@
 	along with the Epeios framework.  If not, see <http://www.gnu.org/licenses/>
 */
 
-#define CSDCMN__COMPILATION
+#define CSDCMN_COMPILATION_
 
 #include "csdcmn.h"
 
@@ -30,7 +30,7 @@ void csdcmn::SendProtocol(
 	sVersion Version,
 	flw::oflow__ &Flow )
 {
-	bso::bInt Buffer;
+	bso::pInteger Buffer;
 
 	if ( Version == UndefinedVersion )
 		qRFwk();

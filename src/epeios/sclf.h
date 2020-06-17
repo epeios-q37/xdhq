@@ -17,41 +17,31 @@
 	along with the Epeios framework.  If not, see <http://www.gnu.org/licenses/>
 */
 
-#ifndef SCLFRNTND__INC
-# define SCLFRNTND__INC
+// SoCLe Frontend
 
-# define SCLFRNTND_NAME		"SCLFRNTND"
+#ifndef SCLF_INC_
+# define SCLF_INC_
 
-# if defined( E_DEBUG ) && !defined( SCLFRNTND_NODBG )
-#  define SCLFRNTND_DBG
+# define SCLF_NAME		"SCLF"
+
+# if defined( E_DEBUG ) && !defined( SCLF_NODBG )
+#  define SCLF_DBG
 # endif
 
-// SoCLe FRoNTeND
-
-# include "sclrgstry.h"
-# include "sclmisc.h"
-
-# include "fblfrd.h"
-
-# include "plgn.h"
+# include "sclm.h"
+# include "sclr.h"
 
 # include "err.h"
-# include "flw.h"
-# include "xml.h"
+# include "fblfrd.h"
+# include "plgn.h"
+# include "rgstry.h"
 
-// NOTA : 'SCLF_' is used in place of 'SCLFRNTND_' for macro. 
-
-/***************/
-/***** OLD *****/
-/***************/
-
-namespace sclfrntnd {
-
+namespace sclf {
 	namespace registry {
 		using rgstry::rEntry;
 
 		namespace parameter {
-			using namespace sclrgstry::parameter;
+			using namespace sclr::parameter;
 
 			extern rEntry Login;
 
@@ -63,7 +53,7 @@ namespace sclfrntnd {
 		}
 
 		namespace definition {
-			using namespace sclrgstry::definition;
+			using namespace sclr::definition;
 		}
 	}
 
@@ -199,8 +189,8 @@ namespace sclfrntnd {
 		qRMV( rKernel, K_, Kernel_ );
 		fblfrd::universal_frontend___ Frontend_;
 		rIOFlow_ Flow_;
-		rgstry::multi_level_registry _Registry;
-		rgstry::level__ _RegistryLevel;
+		rgstry::multi_layer_registry _Registry;
+		rgstry::layer__ _RegistryLayer;
 		mutable TOL_CBUFFER___ _Language;
 	public:
 		void reset( bso::bool__ P = true )
@@ -208,7 +198,7 @@ namespace sclfrntnd {
 			Frontend_.reset( P );
 			Flow_.reset( P );
 			_Registry.reset( P );
-			_RegistryLevel = rgstry::UndefinedLevel;
+			_RegistryLayer = rgstry::UndefinedLayer;
 			_Language.reset();
 			Kernel_ = NULL;
 		}
@@ -217,7 +207,7 @@ namespace sclfrntnd {
 			rKernel &Kernel,
 			const char *Language,
 			fblfrd::cFrontend &FrontendCallback,
-			fblfrd::reporting_callback__ &ReportingCallback );
+			fblfrd::cReporting &ReportingCallback );
 		void Ping( void );
 		void Crash( void );
 		bso::bool__ Connect(
@@ -238,13 +228,13 @@ namespace sclfrntnd {
 			return Frontend_.About( ProtocolVersion, BackendLabel, APIVersion, Backend, BackendCopyright, Software );
 		}
 		void Disconnect( void );
-		const rgstry::multi_level_registry_ &Registry( void ) const
+		const rgstry::multi_layer_registry_ &Registry( void ) const
 		{
 			return _Registry;
 		}
 		const char *Language( void ) const
 		{
-			return sclrgstry::MGetValue( _Registry, rgstry::tentry___( sclrgstry::parameter::Language ), _Language );
+			return sclr::MGetValue( _Registry, rgstry::tentry___( sclr::parameter::Language ), _Language );
 		}
 		void DismissFlow( void )
 		{
@@ -256,7 +246,7 @@ namespace sclfrntnd {
 		}
 	};
 
-	using sclmisc::LoadProject;
+	using sclm::LoadProject;
 
 	void GetProjectsFeatures(
 		const char *Language,
@@ -329,7 +319,7 @@ namespace sclfrntnd {
 	SCLF_I( ns, name, id );\
 \
 	namespace ns {\
-		typedef sclfrntnd::dI1S<d##name##s> dI1S;\
+		typedef sclf::dI1S<d##name##s> dI1S;\
 		qW( I1S );\
 	}\
 	typedef ns::dI1S d##name##sI1S;\
@@ -378,7 +368,7 @@ namespace sclfrntnd {
 
 # define SCLF_I2S( name, id  )\
 	namespace ns {\
-		typedef sclfrntnd::dI1S<d##name##s> dI2S;\
+		typedef sclf::dI1S<d##name##s> dI2S;\
 		qW( I2S );\
 	}\
 	typedef ns::dI2S d##name##sI2S;\
@@ -409,7 +399,7 @@ namespace sclfrntnd {
 			break;
 		}
 	}
-	
+
 	template <typename ... args> inline void Dump_(
 		xml::rWriter &Writer,
 		eKind Kind,
@@ -471,7 +461,7 @@ namespace sclfrntnd {
 	{
 		sdr::row__ Row = I1S.First();
 
-		xml::PutAttribute( sclfrntnd::AmountAttribute, I1S.Amount(), Writer );
+		xml::PutAttribute( sclf::AmountAttribute, I1S.Amount(), Writer );
 
 		while ( Row != qNIL ) {
 			Writer.PushTag( ItemLabel );
@@ -483,7 +473,7 @@ namespace sclfrntnd {
 			Row = I1S.Next( Row );
 		}
 	}
-	
+
 	template <typename ids> inline void Dump(
 		const dI1S<ids> &I1S,
 		const char *ItemsLabel,
@@ -507,7 +497,7 @@ namespace sclfrntnd {
 	{
 		sdr::row__ Row = I1S.First();
 
-		xml::PutAttribute( sclfrntnd::AmountAttribute, I1S.Amount(), Writer );
+		xml::PutAttribute( sclf::AmountAttribute, I1S.Amount(), Writer );
 
 		while ( Row != qNIL ) {
 			Writer.PushTag( ItemLabel );
@@ -540,7 +530,7 @@ namespace sclfrntnd {
 
 	// Root tag is handled by user, so he/she cans put his/her own attributes. 'Amount' attribute is addded.
 	template <typename ids> inline void DumpWithLabelAttribute(
-		const sclfrntnd::dI1S<ids> &I1S,
+		const sclf::dI1S<ids> &I1S,
 		const char *ItemLabel,
 		xml::rWriter &Writer )
 	{
@@ -548,7 +538,7 @@ namespace sclfrntnd {
 	}
 
 	template <typename ids> inline void DumpWithLabelAttribute(
-		const sclfrntnd::dI1S<ids> &I1S,
+		const sclf::dI1S<ids> &I1S,
 		const char *ItemsLabel,
 		const char *ItemLabel,
 		xml::rWriter &Writer )
@@ -561,7 +551,7 @@ namespace sclfrntnd {
 /***** NEW *****/
 /***************/
 
-namespace sclfrntnd {
+namespace sclf {
 
 	// Login-related bevaviour.
 	qENUM( Login ) {
@@ -598,17 +588,13 @@ namespace sclfrntnd {
 	protected:
 		virtual void FBLFRDReport(
 			fblovl::reply__ Reply,
-			const char *Message ) override;
+			const str::dString &Message ) override;
 	public:
 		void reset( bso::bool__ P = true )
-		{
-			cReporting::reset( P );
-		}
+		{}
 		E_CVDTOR( sReportingCallback );
 		void Init( void)
-		{
-			cReporting::Init();
-		}
+		{}
 	};
 
 	const str::dString &About(

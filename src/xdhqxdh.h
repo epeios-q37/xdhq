@@ -22,7 +22,7 @@
 
 # include "scli.h"
 
-# define PROGRAM_NAME		"xdhq"	SCLXDHTML_DEFAULT_SUFFIX
+# define PROGRAM_NAME		"xdhq"	XDHDWS_DEFAULT_SUFFIX
 # define SOFTWARE_NAME		"XDHq"
 # define AUTHOR_NAME		"Claude SIMON"
 # define AUTHOR_CONTACT		"http://q37.info/contact/"

@@ -17,24 +17,28 @@
     along with 'XDHq'.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef REGISTRY__INC
-# define REGISTRY__INC
+#ifndef REGISTRY_INC_
+# define REGISTRY_INC_
 
-# include "sclxdhtml.h"
+# include "sclr.h"
 
 namespace registry {
-	using sclrgstry::rEntry;
+	using sclr::rEntry;
 
 	namespace parameter {
-		using namespace sclxdhtml::registry::parameter;
+		using namespace sclr::parameter;
 
-		extern rEntry
-			HostService,
-			DemoService;
+		extern rEntry HostService;
+
+		extern rEntry FaaS;
+
+		namespace faas {
+            extern rEntry Service;
+		}
 	}
 
 	namespace definition {
-		using namespace sclxdhtml::registry::definition;
+		using namespace sclr::definition;
 	}
 }
 
