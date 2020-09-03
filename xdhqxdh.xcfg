@@ -69,23 +69,30 @@
         ]]>    </Script>
     <Script name="HandleLayout_1" Arguments="Variant,Id,XML,XSL"><![CDATA[
 {
-  let xml = "%XML%";
+  let xml = "%XML%";	// 'XML' is HTML if 'XSL' is empty.
   let xsl = "%XSL%";
   let id = "%Id%";
-
+  
+  log("xml: " + xml);
+  
   switch ( "%Variant%" ) {
-  case 'Prepend':
+  case 'Prepend':	// Deprecated
     prependLayout(id, xml, xsl);
     break;
-  case 'Set':
+  case 'Set':	// Deprecated
     setLayout(id, xml, xsl);
     break;
-  case 'Append':
+  case 'Append':	// Deprecated
     appendLayout(id, xml, xsl);
     break;
+  default:
+	if ( "%Variant%" === 'inner' )
+		getElement(id).innerHTML = getLayoutHTML(xml, xsl);
+	else
+		getElement(id).insertAdjacentHTML("%Variant%", getLayoutHTML(xml, xsl));
   }
 
-  var digests = fetchEventHandlersAndWidgest(id);
+  var digests = fetchEventHandlersAndWidgest(getElement(id).parentElement);
   digests;  // Not returned to user. Splitted and given after processing to 'SetEnventHandlers_1' and  InstantiateWidgets_1' above internal scripts.
 }
         ]]>    </Script>
@@ -97,6 +104,26 @@
     <Script name="SetContents_1" Arguments="#Ids,#Contents"><![CDATA[
 {
   setContents( %#Ids%, %#Contents% );
+}
+        ]]>    </Script>
+    <Script name="GetValues_1" Arguments="#Ids"><![CDATA[
+{
+  getValues(%#Ids%);
+}
+        ]]>    </Script>
+    <Script name="SetValues_1" Arguments="#Ids,#Values"><![CDATA[
+{
+  setValues( %#Ids%, %#Values% );
+}
+        ]]>    </Script>
+    <Script name="GetMarks_1" Arguments="#Ids"><![CDATA[
+{
+  getMarks(%#Ids%);
+}
+        ]]>    </Script>
+    <Script name="SetMarks_1" Arguments="#Ids,#Marks"><![CDATA[
+{
+  setMarks( %#Ids%, %#Marks% );
 }
         ]]>    </Script>
     <Script name="HandleClasses_1" Arguments="Variant,#Ids,#Classes"><![CDATA[
@@ -149,14 +176,44 @@
   getElement( "%Id%" ).%#Name%;
 }
         ]]>    </Script>
-    <Script name="Parent_1" Arguments="Id"><![CDATA[
-{
-  getOrGenerateId( getElement( "%Id% ).parentElement );
-}
-        ]]>    </Script>
     <Script name="Focus_1" Arguments="Id"><![CDATA[
 {
   getElement( "%Id%" ).focus();
+}
+        ]]>    </Script>
+    <Script name="Parent_1" Arguments="Id"><![CDATA[
+{
+  getOrGenerateId( getElement( "%Id%" ).parentElement );
+}
+        ]]>    </Script>
+    <Script name="FirstChild_1" Arguments="Id"><![CDATA[
+{
+  getOrGenerateId(getElement("%Id%").firstElementChild);
+}
+        ]]>    </Script>
+    <Script name="LastChild_1" Arguments="Id"><![CDATA[
+{
+  getOrGenerateId(getElement("%Id%").lastElementChild);
+}
+        ]]>    </Script>
+    <Script name="PreviousSibling_1" Arguments="Id"><![CDATA[
+{
+  getOrGenerateId(getElement("%Id%").previousElementSibling);
+}
+        ]]>    </Script>
+    <Script name="NextSibling_1" Arguments="Id"><![CDATA[
+{
+  getOrGenerateId(getElement("%Id%").nextElementSibling);
+}
+        ]]>    </Script>
+    <Script name="ScrollTo_1" Arguments="Id"><![CDATA[
+{
+  getElement("%Id%").scrollIntoView({behavior: 'smooth', block: 'center'});
+}
+        ]]>    </Script>
+    <Script name="Flush_1" Arguments=""><![CDATA[
+{
+  ""; // To wait that all pending commands were executed.
 }
         ]]>    </Script>
     <Script name="" Arguments=""><![CDATA[
