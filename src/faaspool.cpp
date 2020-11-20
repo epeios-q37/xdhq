@@ -36,18 +36,23 @@ using namespace faaspool;
 #include "str.h"
 #include "xdhdws.h"
 
+#include <time.h>
+
 namespace {
 	qCDEF( char *, ProtocolId_, "9efcf0d1-92a4-4e88-86bf-38ce18ca2894" );
 	qCDEF(csdcmn::sVersion, LastVersion_, 0);
 
 	namespace registry_ {
 		namespace parameter {
+			// Inactivity delay, in minutes, after which a connection is closed.
+			// Default value: see 'connection_timeout_::Default_';
+			sclr::rEntry ConnectionTimeout_("ConnectionTimeout", registry::parameter::FaaS);
 		}
 
 		namespace definition {
-            namespace {
-                sclr::rEntry FaaS_("FaaS", sclr::Definitions);
-            }
+			namespace {
+					sclr::rEntry FaaS_("FaaS", sclr::Definitions);
+			}
 
 			sclr::rEntry Notification( "Notification", FaaS_ );
 			sclr::rEntry URL( "URL", FaaS_ );
@@ -60,6 +65,121 @@ namespace {
 	qW( Shareds_ );
 
 	qROW( BRow_ );	// Back-end Row.
+
+	// Handling of the connection timeout.
+	namespace connection_timeout_ {
+
+		qROW( Row );	// Connection Timeout row
+
+		namespace {
+			// Default inactivity delay, in minutes, after which a connection is closed.
+			qCDEF(bso::sU8, Default_, 60);
+			mtx::rMutex Mutex_ = mtx::Undefined;
+			lstbch::qLBUNCHw(sck::rRWDriver *, sRow) Drivers_;
+		}
+
+		void CTor(void) {
+			time_t Stamp = tol::EpochTime(false);
+
+			if ( difftime(Stamp + 60, Stamp) != 60 )
+				qRChk();	// 'time_t' is not expressed in second!
+
+			Drivers_.Init();
+			Mutex_ = mtx::Create();
+		}
+
+		void DTor(void) {
+			Drivers_.reset();
+
+			if ( Mutex_ != mtx::Undefined )
+				mtx::Delete(Mutex_);
+
+			Mutex_ = mtx::Undefined;
+		}
+
+		sRow Store(sck::rRWDriver &Driver)
+		{
+			sRow Row = qNIL;
+		qRH;
+			mtx::rHandle Mutex;
+		qRB;
+			Mutex.InitAndLock(Mutex_);
+
+			Row = Drivers_.Add(&Driver);
+		qRR;
+		qRT;
+		qRE;
+			return Row;
+		}
+
+		void Delete(sRow Row)
+		{
+		qRH;
+			mtx::rHandle Mutex;
+		qRB;
+			Mutex.InitAndLock(Mutex_);
+
+			Drivers_.Delete(Row);
+		qRR;
+		qRT;
+		qRE;
+		}
+
+		void Purge(void)
+		{
+		qRH;
+			mtx::rHandle Mutex;
+			time_t Stamp = 0;	// 'time_t' must be expressed in seconds (tested in CTor(…)).
+			bso::sU32 Timeout = 0;
+			sRow Row = qNIL, Next = qNIL;
+		qRB;
+			Timeout = sclm::OGetU32(registry_::parameter::ConnectionTimeout_, Default_);
+
+			if ( Timeout )
+				Stamp = tol::EpochTime( false ) - Timeout * 60;
+
+			Mutex.InitAndLock(Mutex_);
+
+			Row = Drivers_.First();
+
+			while ( Row != qNIL ) {
+				sck::rRWDriver *Driver = Drivers_(Row);
+
+				if ( ( Driver != NULL ) && ( Driver->GetEpochTimeStamp() < Stamp ) ) {
+					// 'Shutdown()' will cause an error in the thread reading the socket,
+					// which, in turn, will close the socket gracefully.
+					// The corresponding Driver will also be removed from 'Drivers_'.
+					sck::Shutdown(Driver->Socket(), qRPU);
+
+					Drivers_.Store(NULL, Row);
+
+					Next = Drivers_.Next(Row);
+					Row = Next;
+				} else
+					Row = Drivers_.Next(Row);
+			}
+		qRR;
+		qRT;
+		qRE;
+		}
+
+		bso::sBool WasLate(sRow Row)
+		{
+			bso::sBool WasLate = false;
+		qRH;
+			mtx::rHandle Mutex;
+		qRB;
+			if ( Row != qNIL ) {
+				Mutex.InitAndLock(Mutex_);
+
+				WasLate = Drivers_(Row) == NULL;
+			}
+		qRR;
+		qRT;
+		qRE;
+			return WasLate;
+		}
+	}
 }
 
 namespace faaspool {
@@ -571,7 +691,7 @@ namespace {
 	qRB;
 		Log.Init( common::LogDriver );
 
-		Log << Token << " (" << IP << "): " <<  Message;
+		Log << Token << ' ' << IP << ": " <<  Message;
 	qRR;
 	qRT;
 	qRE;
@@ -755,6 +875,9 @@ namespace {
 		str::wString IP;
 		sck::rRWDriver Driver;
 		rBackend_ *Backend = NULL;
+		connection_timeout_::sRow CTRow = qNIL;
+		str::wString Message;
+		bso::pInteger IBuffer;
 	qRB;
 		Socket = Data.Socket;
 		IP.Init( Data.IP );
@@ -765,13 +888,22 @@ namespace {
 
 		Handshake_( Driver );
 
-		if ( ( Backend = CreateBackend_( Driver, IP ) ) != NULL )
+		if ( ( Backend = CreateBackend_( Driver, IP ) ) != NULL ) {
+			CTRow = connection_timeout_::Store(Driver);
 			HandleSwitching_( Driver, Backend->TRow, Backend->Shareds, Backend->Switch );	// Does not return until disconnection or error.
+		}
 	qRR;
 		sclm::ErrorDefaultHandling();	// Also resets the error, otherwise the `WaitUntilNoMoreClient()` will lead to a deadlock on next error.
 	qRT;
 		if ( Backend != NULL ) {
-				Log_(IP, Backend->Token, "Quitting");
+			Message.Init("Quit (");
+			Message.Append(bso::Convert(*CTRow, IBuffer));
+			Message.Append(')');
+			if ( connection_timeout_::WasLate(CTRow) ) {
+				Message.Append(" T");
+			}
+
+			Log_(IP, Backend->Token, Message);
 			Backend->Driver = NULL;	// This signals that the backend is no more present.
 			Backend->WaitUntilNoMoreClient();
 			Remove_( Backend->Row );
@@ -779,6 +911,9 @@ namespace {
 
 			Backend = NULL;
 		}
+
+		if ( CTRow != qNIL )
+			connection_timeout_::Delete(CTRow);
 
 		Driver.reset();	// Otherwise it will be done after the destruction of the socket, hence the commit will fail.
 
@@ -796,6 +931,8 @@ namespace {
 	qRFH;
 	qRFB;
 		NewConnexion_( Data, Blocker );
+
+		connection_timeout_::Purge();
 	qRFR;
 	qRFT;
 	qRFE(sclm::ErrorDefaultHandling());
@@ -896,9 +1033,15 @@ bso::sBool faaspool::GetHead(
 
 qGCTOR(faaspool)
 {
+qRFH;
+qRFB;
 	Mutex_ = mtx::Create();
 	Backends_.Init();
 	Index_.Init();
+	connection_timeout_::CTor();
+qRFR;
+qRFT;
+qRFE(sclm::ErrorDefaultHandling());
 }
 
 qGDTOR(faaspool)
@@ -913,5 +1056,7 @@ qGDTOR(faaspool)
 
 		Row = Backends_.Next( Row );
 	}
+
+	connection_timeout_::DTor();
 }
 
