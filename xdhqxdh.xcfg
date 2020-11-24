@@ -6,7 +6,7 @@
    <Command>Test</Command>
    <FaaS>
     <Service>53700</Service>
-    <ConnectionTimeout>1</ConnectionTimeout>
+    <ConnectionTimeout>90</ConnectionTimeout>
    </FaaS>
    <Plugins/>
   </Parameters>
