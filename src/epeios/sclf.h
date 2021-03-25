@@ -50,6 +50,17 @@ namespace sclf {
 					UserID,
 					Password;
 			}
+
+			extern rEntry Preset;
+
+			namespace preset {
+				extern rEntry Type;
+				extern rEntry Feature;
+			}
+		}
+
+		namespace setup {
+			using namespace sclr::setup;
 		}
 
 		namespace definition {
@@ -69,7 +80,7 @@ namespace sclf {
 		const str::string_ &Id,
 		str::string_ &Filename );
 
-	struct rFeatures {
+	struct rBackendFeatures {
 	public:
 		str::string Plugin;	// Name of the plugin.
 		const char *Identifier;
@@ -80,7 +91,7 @@ namespace sclf {
 			Identifier = NULL;
 			Parameters.reset( P );
 		}
-		E_CDTOR( rFeatures );
+		E_CDTOR( rBackendFeatures );
 		void Init(void)
 		{
 			Plugin.Init();
@@ -96,7 +107,7 @@ namespace sclf {
 	void SetBackendFeatures(
 		const str::dString &BackendType,
 		const str::string_ &Parameters,
-		rFeatures &Features );
+		rBackendFeatures &Features );
 
 	// Is exposed because, even if there is generally only one kernel per frontend, there could be two (a frontend dealing with two different backends).
 	class rKernel
@@ -115,7 +126,7 @@ namespace sclf {
 		}
 		E_CVDTOR( rKernel );
 		sdr::sRow Init(
-			const rFeatures &Features,
+			const rBackendFeatures &Features,
 			const plgn::dAbstracts &Abstracts );
 		const char *Details( void )
 		{
@@ -248,15 +259,11 @@ namespace sclf {
 
 	using sclm::LoadProject;
 
-	void GetProjectsFeatures(
+	void WriteBackendsFeatures(
 		const char *Language,
 		xml::rWriter &Writer );
 
-	void GetBackendsFeatures(
-		const char *Language,
-		xml::rWriter &Writer );
-
-	void GuessBackendFeatures( rFeatures &Features );	// Set features following what's in registry.
+	void GuessBackendFeatures( rBackendFeatures &Features );	// Set features following what's in registry.
 
 # define SCLF_I( ns, name, id  )\
 	namespace ns {\
@@ -558,7 +565,7 @@ namespace sclf {
 		lBlank,		// All the fields are left blank,
 		lPartial,	// Only the 'Login' field is filled.
 		lFull,		// Both 'Login' and 'Password' field are filled.
-		lAutomatic,	// The 'Login' page is skipped, and the login parameters are retrieved frrom the configuration file.
+		lAutomatic,	// The 'Login' page is skipped, and the login parameters are retrieved from the configuration file.
 		l_amount,
 		l_Undefined
 	};
@@ -571,7 +578,7 @@ namespace sclf {
 		str::dString &UserID,
 		str::dString &Password );
 
-	eLogin GetLoginFeatures( xml::rWriter &Writer );
+	eLogin WriteLoginFeatures(xml::rWriter &Writer);
 
 	/* An identifier usually identifies the plugin used to access the backend.
 	Identifier belows are returned when there in no bckend, or if the backend is embedded. */
@@ -598,7 +605,7 @@ namespace sclf {
 	};
 
 	const str::dString &About(
-		const rFeatures &Features,
+		const rBackendFeatures &Features,
 		str::dString &About );
 
 	qENUM( BackendSetupType ) {
@@ -612,20 +619,62 @@ namespace sclf {
 
 	eBackendSetupType GetBackendSetupType( const str::dString &Pattern );
 
-	qENUM( ProjectHandling ) {
-		phNone,	// The project is not handled ; it's the one which is selected by default, user can change.
-		phLoad,	// The project is loaded.
-		phRun,	// Project loaded and run.
-		phLogin,	// Project is loaded, but only the login form is displayed ; login can be skipped depoending on loging configuration.
-		ph_amount,
-		ph_Undefined,
+	qENUM( PresetType ) {
+		ptNone,			// No presets.
+		ptSetup,		// Use a setup.
+		ptProject,	// Use of a project file.
+		pt_amount,
+		pt_Undefined
 	};
 
-	const char *GetLabel( eProjectHandling );
+	const char *GetLabel( ePresetType Type );
 
-	eProjectHandling GetProjectHandling( const str::dString &Pattern );
+	ePresetType GetPresetType( const str::string_ &Pattern );
 
-	eProjectHandling HandleProject( const scli::sInfo &Info );
+	ePresetType GetPresetFeatures(str::dString &Feature);	// Retrieves preset features from registry.
+
+	void WritePresetFeatures(
+		const char *Language,
+		xml::rWriter &Writer );
+
+	// If true, caller has to launch the main page of the app, otherwise to display the login page.
+	bso::sBool LoadPreset(
+		ePresetType Type,
+		const str::string_ &PresetFeature,
+		const scli::sInfo &Info );
+
+	qENUM( PresetHandling ) {
+		phShow,	// The default preset is displayed on the prolog page.
+		phLoad,	// The default preset is loaded and the login page is displayed.
+		phLogin,	// The default preset is loaded and the login page is displayed, without the backend form.
+		phRun,	// The application is launched with the default preset.
+		ph_amount,
+		ph_Undefined,
+		ph_Default = phShow
+	};
+
+	const char *GetLabel(ePresetHandling Handling);
+
+	ePresetHandling GetPresetHandling(const str::dString &Pattern);
+
+	ePresetHandling HandlePreset(const scli::sInfo &Info);
+
+	// Concerns the 'Handling' attribute of the 'Setups/Setup' entries.
+	// This entries are for all type of sftware, but the 'Handling' attribute is only for frontend related software.
+	qENUM( SetupHandling ) {
+		shLoad,	// Simply load the setup,
+		shRun,		// Load the setup and go to the main page of the software.
+		sh_amount,
+		sh_Undefined,
+		sh_Default = shLoad
+	};
+
+	const char *GetLabel(eSetupHandling Handling);
+
+	eSetupHandling GetSetupHandling(const str::dString &Pattern);
+
+	// Handles setup following configuration. When returning 'true', the main page of the application have to be displayed?
+	bso::sBool HandleSetup(const str::dString &Id);
 }
 
 #endif

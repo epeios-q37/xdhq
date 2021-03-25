@@ -19,7 +19,7 @@
      THIS SERVICE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
      EXPRESS OR IMPLIED. THE USE OF THIS SERVICE IS AT YOUR OWN RISK.
 ****************************************************************************
-                    ]]>    </Notification>
+					]]>    </Notification>
    </FaaS>
    <Plugins target="Token">
     <Plugin id="Forbidden">
@@ -215,11 +215,6 @@
     <Script name="Flush_1" Arguments=""><![CDATA[
 {
   ""; // To wait that all pending commands were executed.
-}
-        ]]>    </Script>
-    <Script name="AttachQRCode_1" Arguments="Id,URL,Options"><![CDATA[
-{
-  new QRCode('%Id%', %Options%).makeCode('%URL%')
 }
         ]]>    </Script>
     <Script name="" Arguments=""><![CDATA[

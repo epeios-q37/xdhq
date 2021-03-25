@@ -29,6 +29,9 @@ rgstry::entry___ sclf::registry::parameter::Login( "Login", sclr::Parameters );
 rgstry::entry___ sclf::registry::parameter::login::UserID( "UserID", Login );
 rgstry::entry___ sclf::registry::parameter::login::Password( "Password", Login );
 
+rgstry::entry___ sclf::registry::parameter::Preset( "Preset", sclr::Parameters );
+rgstry::entry___ sclf::registry::parameter::preset::Type("@Type", Preset);
+rgstry::entry___ sclf::registry::parameter::preset::Feature(Preset);
 
 namespace parameter_ {
 	rgstry::entry___ Backend_( "Backend", sclr::Parameters );
@@ -40,8 +43,10 @@ namespace parameter_ {
 
 	namespace project_ {
 		using namespace sclr::parameter::project;
+	}
 
-		rgstry::entry___ Handling_( "@Handling", sclr::parameter::Project );
+	namespace preset_ {
+		rgstry::entry___ Handling_( "@Handling", registry::parameter::Preset );
 	}
 
 	rgstry::entry___ &Login_ = registry::parameter::Login;
@@ -60,6 +65,10 @@ namespace parameter_ {
 			Key_( "Key", Watchdog_ ),
 			Code_( "Code", Watchdog_ );
 	}
+}
+
+namespace setup_ {
+	rgstry::entry___ Handling("@Handling", registry::setup::Setup);
 }
 
 rgstry::rEntry &sclf::BackendParametersRegistryEntry = parameter_::Backend_;
@@ -180,7 +189,7 @@ qRE
 	return Login;
 }
 
-eLogin sclf::GetLoginFeatures( xml::rWriter &Writer )
+eLogin sclf::WriteLoginFeatures(xml::rWriter &Writer)
 {
 	eLogin Login = l_Undefined;
 qRH
@@ -206,6 +215,8 @@ qRB
 		qRFwk();
 		break;
 	}
+
+	Writer.PopTag();
 qRR
 qRT
 qRE
@@ -468,21 +479,95 @@ void sclf::rFrontend::Disconnect( void )
 	Flow_.reset();
 }
 
+ePresetType sclf::GetPresetFeatures(str::dString &Feature)
+{
+	ePresetType Type = pt_Undefined;
+qRH;
+	str::wString RawType;
+qRB;
+	RawType.Init();
 
-void sclf::GetProjectsFeatures(
+	sclm::OGetValue(registry::parameter::preset::Type, RawType);
+
+	Type = GetPresetType(RawType);
+
+	switch ( Type ) {
+	case ptNone:
+		break;
+	case ptSetup:
+	case ptProject:
+		sclm::OGetValue(registry::parameter::preset::Feature, Feature);
+		break;
+	case pt_Undefined:
+		sclm::ReportAndAbort(SCLF_NAME "_UnknownPresetType", RawType);
+		break;
+	default:
+		qRFwk();
+		break;
+	}
+qRR;
+qRT;
+qRE;
+	return Type;
+}
+
+void sclf::WritePresetFeatures(
 	const char *Language,
 	xml::rWriter &Writer )
 {
 qRH
-	str::string Pattern;
+	ePresetType Type = pt_Undefined;
+	str::string Feature, DefaultId, Translation;
+	str::wStrings Ids, Aliases;
+	sdr::sRow Row = qNIL;
 qRB
-	GetFeatures_( "Projects", "Project", "DefaultProjectType", parameter_::project_::Type, sclr::definition::project::Id, sclr::parameter::project::Feature, sclr::definition::DefaultProjectId, sclr::definition::TaggedProject, definition_::tagged_project_::Alias_, Language, Writer );
+	Feature.Init();
+
+	Type = GetPresetFeatures(Feature);
+
+	Writer.PutValue(GetLabel(Type), "DefaultPreset");
+
+	DefaultId.Init();
+
+	sclr::GetDefaultSetupId(sclm::GetRegistry(), DefaultId);
+
+	if ( Type == ptSetup )
+		if ( Feature.Amount() != 0 )
+			DefaultId = Feature;
+
+	tol::Init(Ids, Aliases);
+
+	sclr::GetSetupIds(sclm::GetRegistry(), Ids);
+	sclr::GetSetupAliases(sclm::GetRegistry(), Ids, Aliases);
+
+	if ( Ids.Amount() != Aliases.Amount() )
+		qRFwk();
+
+	Writer.PushTag("Setups");
+
+	if ( DefaultId.Amount() )
+		Writer.PutAttribute("Default", DefaultId);
+
+	Row = Ids.First();
+
+	while( Row != qNIL ) {
+		Writer.PushTag("Setup");
+		Writer.PutAttribute("id", Ids(Row));
+		Translation.Init();
+
+		scll::GetLocale().GetTranslation(Aliases(Row), Language, Translation);
+
+		Writer.PutAttribute("Alias", Translation);
+		Writer.PopTag();
+
+		Row = Ids.Next(Row);
+	}
 qRR
 qRT
 qRE
 }
 
-void sclf::GetBackendsFeatures(
+void sclf::WriteBackendsFeatures(
 	const char *Language,
 	xml::rWriter &Writer )
 {
@@ -509,7 +594,7 @@ qRE
 
 static void GetBackendFeatures_(
 	const str::string_ &Id,
-	rFeatures &Features )
+	rBackendFeatures &Features )
 {
 	sclr::MGetValue( sclm::GetRegistry(), rgstry::tentry___( definition_::backends::tagged_backend::Plugin, Id ), Features.Plugin );
 	sclr::OGetValue( sclm::GetRegistry(), rgstry::tentry___( definition_::backends::TaggedBackend, Id ), Features.Parameters );
@@ -551,7 +636,7 @@ namespace {
 void sclf::SetBackendFeatures(
 	const str::string_ &BackendType,
 	const str::string_ &Parameters,
-	rFeatures &Features )
+	rBackendFeatures &Features )
 {
 qRH
 	str::wString Id;
@@ -575,7 +660,7 @@ qRE
 }
 
 sdr::sRow sclf::rKernel::Init(
-	const rFeatures &Features,
+	const rBackendFeatures &Features,
 	const plgn::dAbstracts &Abstracts )
 {
 	sdr::sRow Row = qNIL;
@@ -624,7 +709,7 @@ const str::dString &sclf::rKernel::AboutPlugin( str::dString &About )
 }
 
 namespace{
-	bso::bool__ GuessBackendFeatures_( rFeatures &Features )
+	bso::bool__ GuessBackendFeatures_( rBackendFeatures &Features )
 	{
 		bso::bool__ BackendFound = false;
 	qRH
@@ -647,14 +732,14 @@ namespace{
 	}
 }
 
-void sclf::GuessBackendFeatures( rFeatures &Features )
+void sclf::GuessBackendFeatures( rBackendFeatures &Features )
 {
 	if ( !GuessBackendFeatures_( Features ) )
 		sclm::ReportAndAbort( SCLF_NAME "_MissingBackendDeclaration" );
 }
 
 const str::dString &sclf::About(
-	const rFeatures &Features,
+	const rBackendFeatures &Features,
 	str::dString &About )
 {
 qRH
@@ -677,15 +762,46 @@ qRE
 	return About;
 }
 
+#define C( name ) case pt##name: return #name; break
+
+const char *sclf::GetLabel( ePresetType Type )
+{
+	switch ( Type ) {
+	C( None );
+	C( Setup );
+	C( Project );
+	default:
+		qRFwk();
+		break;
+	}
+
+	return NULL;	// Pour viter un 'warning'.
+}
+
+#undef C
+
+static stsfsm::automat PresetTypeAutomat_;
+
+static void FillPresetTypeAutomat_( void )
+{
+	PresetTypeAutomat_.Init();
+	stsfsm::Fill( PresetTypeAutomat_, pt_amount, GetLabel );
+}
+
+ePresetType sclf::GetPresetType( const str::string_ &Pattern )
+{
+	return stsfsm::GetId( Pattern, PresetTypeAutomat_, pt_Undefined, pt_amount );
+}
+
 #define C( name )	case ph##name : return #name; break
 
-const char *sclf::GetLabel( eProjectHandling Handling )
+const char *sclf::GetLabel( ePresetHandling Handling )
 {
 	switch ( Handling ) {
-	C( None );
+	C( Show );
 	C( Load );
-	C( Run );
 	C( Login );
+	C( Run );
 	default:
 		qRFwk();
 		break;
@@ -697,40 +813,89 @@ const char *sclf::GetLabel( eProjectHandling Handling )
 #undef C
 
 namespace {
-	stsfsm::wAutomat ProjectHandlingAutomat_;
+	stsfsm::wAutomat PresetHandlingAutomat_;
 
-	void FillProjectHandlingAutomat_( void )
+	void FillPresetHandlingAutomat_( void )
 	{
-		ProjectHandlingAutomat_.Init();
-		stsfsm::Fill<eProjectHandling>( ProjectHandlingAutomat_, ph_amount, GetLabel );
+		PresetHandlingAutomat_.Init();
+		stsfsm::Fill<ePresetHandling>( PresetHandlingAutomat_, ph_amount, GetLabel );
 	}
 }
 
-eProjectHandling sclf::GetProjectHandling( const str::dString &Pattern )
+ePresetHandling sclf::GetPresetHandling( const str::dString &Pattern )
 {
-	return stsfsm::GetId( Pattern, ProjectHandlingAutomat_, ph_Undefined, ph_amount );
+	return stsfsm::GetId( Pattern, PresetHandlingAutomat_, ph_Undefined, ph_amount, qRPU );
 }
 
-eProjectHandling sclf::HandleProject( const scli::sInfo &Info )
+bso::sBool sclf::LoadPreset(
+	ePresetType Type,
+	const str::string_ &PresetFeature,
+	const scli::sInfo &Info )
 {
-	eProjectHandling Handling = phNone;
+	switch ( Type ) {
+	case ptNone:
+		sclr::Erase( sclr::lSetup );
+		return false;
+		break;
+	case ptSetup:
+		return HandleSetup(PresetFeature);
+		break;
+	case ptProject:
+		if ( PresetFeature.Amount() == 0  )
+			sclm::ReportAndAbort( SCLF_NAME "_NoProjectFileSelected" );
+		sclm::LoadProject( PresetFeature, Info );	// TODO: depending of the parameters, may be return false;
+		return true;
+		break;
+	case pt_Undefined:
+		qRFwk();
+		break;
+	default:
+		qRFwk();
+		break;
+	}
+
+	return true;	// To avoid a warning.
+}
+
+namespace {
+	void LoadPreset_(const scli::sInfo &Info)
+	{
+	qRH;
+		ePresetType Type = pt_Undefined;
+		str::wString Feature;
+	qRB;
+		Feature.Init();
+		Type = GetPresetFeatures(Feature);
+
+		LoadPreset(Type, Feature, Info);
+	qRR;
+	qRT;
+	qRE;
+	}
+}
+
+ePresetHandling sclf::HandlePreset(const scli::sInfo &Info)
+{
+	ePresetHandling Handling = ph_Default;
 qRH
 	str::wString RawHandling;
 qRB
 	RawHandling.Init();
 
-	if ( ( sclm::OGetValue( parameter_::project_::Handling_, RawHandling ) )
+	if ( ( sclm::OGetValue( parameter_::preset_::Handling_, RawHandling ) )
 		  && ( RawHandling.Amount() != 0 ) ) {
-		Handling = GetProjectHandling( RawHandling );
+		Handling = GetPresetHandling( RawHandling );
 
 		if ( Handling == ph_Undefined )
-			sclr::ReportBadOrNoValueForEntryErrorAndAbort( parameter_::project_::Handling_ );
+			sclr::ReportBadOrNoValueForEntryErrorAndAbort( parameter_::preset_::Handling_ );
 
 		switch ( Handling ) {
+		case phShow:
+			break;
 		case phLoad:
-		case phRun:
 		case phLogin:
-			sclm::LoadProject( Info );
+		case phRun:
+			LoadPreset_(Info);
 			break;
 		default:
 			qRGnr();
@@ -743,12 +908,68 @@ qRE
 	return Handling;
 }
 
+#define C( name )	case sh##name : return #name; break
+
+const char *sclf::GetLabel( eSetupHandling Handling )
+{
+	switch ( Handling ) {
+	C( Load );
+	C( Run );
+	default:
+		qRFwk();
+		break;
+	}
+
+	return NULL;	// To avoid a warning.
+}
+
+#undef C
+
+namespace {
+	stsfsm::wAutomat SetupHandlingAutomat_;
+
+	void FillSetupHandlingAutomat_( void )
+	{
+		SetupHandlingAutomat_.Init();
+		stsfsm::Fill<eSetupHandling>(SetupHandlingAutomat_, sh_amount, GetLabel);
+	}
+}
+
+eSetupHandling sclf::GetSetupHandling(const str::dString &Pattern)
+{
+	return stsfsm::GetId(Pattern, SetupHandlingAutomat_, sh_Undefined, sh_amount, qRPU);
+}
+
+bso::sBool sclf::HandleSetup(const str::dString &Id)
+{
+	eSetupHandling Handling = sh_Default;
+qRH;
+	str::wString RawHandling;
+qRB;
+	RawHandling.Init();
+
+	if ( sclm::OGetValue(rgstry::rTEntry(setup_::Handling, Id), RawHandling) ) {
+		if ( ( Handling = GetSetupHandling(RawHandling) ) == sh_Undefined ) {
+			sclm::ReportAndAbort(SCLF_NAME "_UnknownSetupHandling", RawHandling);
+		}
+	}
+
+	sclm::FillSetupRegistry(Id);
+qRR;
+qRT;
+qRE;
+	return Handling == shRun;
+}
+
+
 namespace {
 	void FillAutomats_( void )
 	{
 		FillLoginAutomat_();
 		FillBackendSetupTypeAutomat_();
-		FillProjectHandlingAutomat_();
+		FillPresetTypeAutomat_();
+		FillPresetHandlingAutomat_();
+		FillSetupHandlingAutomat_();
 	}
 }
 
