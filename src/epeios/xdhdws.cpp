@@ -115,18 +115,18 @@ namespace {
 					}
 				}
 
-				template <typename type> void GetScriptArguments_(
+				template <typename type> void GetScriptTags_(
 					const type &Name,
-					str::dStrings &Splitted)
+					str::dStrings &Tags)
 				{
 				qRH
-					str::wString Merged;
+					str::wString MergedTags;
 				qRB
-					Merged.Init();
+					MergedTags.Init();
 
-					sclm::MGetValue(rgstry::rTEntry(TaggedScriptArguments_, Name), Merged);
+					sclm::MGetValue(rgstry::rTEntry(TaggedScriptArguments_, Name), MergedTags);
 
-					Split_(Merged, Splitted);
+					Split_(MergedTags, Tags);
 				qRR
 				qRE
 				qRT
@@ -181,31 +181,31 @@ namespace {
 					}
 				}
 
-				void SubstituteArguments_(
-					const str::string_ &Tagged,	// Script with tags. When returning, tags are substitued.
-					const str::dStrings &Arguments,
-					const str::dStrings &Values,
-					str::dString &Substituted )
+				void SubstituteTags_(
+					const str::string_ &TaggedScript,	// Script with tags. When returning, tags are substitued.
+					const str::dStrings &TagList,
+					const str::dStrings &RawTagValues,
+					str::dString &Script )
 				{
 				qRH
 					str::strings Tags, TagValues;
 					sdr::sRow Row = qNIL;
 				qRB
-					if ( Arguments.Amount() != Values.Amount())
+					if ( TagList.Amount() != RawTagValues.Amount())
 						qRFwk();
 
 					Tags.Init();
 					TagValues.Init();
 
-					Row = Arguments.First();
+					Row = TagList.First();
 
 					while ( Row != qNIL ) {
-						AppendTag_(Arguments(Row), Values(Row), Tags, TagValues);
+						AppendTag_(TagList(Row), RawTagValues(Row), Tags, TagValues);
 
-						Row = Arguments.Next(Row);
+						Row = TagList.Next(Row);
 					}
 
-					tagsbs::SubstituteLongTags( Tagged, Tags, TagValues, Substituted );
+					tagsbs::SubstituteLongTags(TaggedScript, Tags, TagValues, Script);
 				qRR
 				qRT
 				qRE
@@ -214,20 +214,20 @@ namespace {
 
 			template <typename type> void GetScript_(
 				const type &Name,
-				const str::dStrings &Values,
+				const str::dStrings &TagValues,
 				str::string_ &Script)
 			{
 			qRH
 				str::string TaggedScript;
-				str::wStrings Arguments;
+				str::wStrings TagList;
 			qRB
 				TaggedScript.Init();
 				GetTaggedScript_( Name, TaggedScript );
 
-				Arguments.Init();
-				GetScriptArguments_(Name, Arguments);
+				TagList.Init();
+				GetScriptTags_(Name, TagList);
 
-				SubstituteArguments_(TaggedScript, Arguments, Values, Script);
+				SubstituteTags_(TaggedScript, TagList, TagValues, Script);
 			qRR
 			qRT
 			qRE
@@ -236,9 +236,10 @@ namespace {
 
 		template <typename type> bso::sBool BaseProcess_(
 			const type &ScriptName,
-			const str::dStrings &Values,
+			const str::dStrings &TagValues,
 			xdhcuc::cSingle &Callback,
 			tht::rBlocker *Blocker = NULL,
+			bso::sBool *SuccessPointer = NULL,
 			str::dString *ReturnValue = NULL)
 		{
 			bso::sBool Success = false;
@@ -247,9 +248,9 @@ namespace {
 		qRB
 			Script.Init();
 
-			GetScript_(ScriptName, Values, Script);
+			GetScript_(ScriptName, TagValues, Script);
 
-			Success = Callback.Process(Script, Blocker, ReturnValue );
+			Success = Callback.Process(Script, Blocker, SuccessPointer, ReturnValue );
 		qRR
 		qRT
 		qRE
@@ -261,10 +262,11 @@ namespace {
 		namespace {
 			bso::sBool ExecuteAndGetDigest_(
 				const char *ScriptName,
-				const str::dStrings &Values,
+				const str::dStrings &TagValues,
 				xdhcuc::cSingle &Callback,
 				xdhcmn::digest_ &Digest,
-				tht::rBlocker &Blocker )
+				tht::rBlocker &Blocker,
+				bso::sBool *SuccessPointer)
 			{
 				bso::sBool Success = false;
 			qRH
@@ -272,7 +274,7 @@ namespace {
 			qRB
 				RawDigest.Init();
 
-				if ( ( Success = BaseProcess_(ScriptName, Values, Callback, &Blocker, &RawDigest) ) ) {
+				if ( ( Success = BaseProcess_(ScriptName, TagValues, Callback, &Blocker, SuccessPointer, &RawDigest) ) ) {
 					Digest.Init();
 					xdhcmn::Split( RawDigest, Digest );
 				}
@@ -353,7 +355,7 @@ namespace {
 					Arguments.Append(IdsTag);
 					Arguments.Append(EventsTag);
 
-					Success = BaseProcess_( ss_::SetEventHandlers, Arguments, Callback);
+					Success = BaseProcess_(ss_::SetEventHandlers, Arguments, Callback);
 				}
 			qRR
 			qRT
@@ -439,7 +441,7 @@ namespace {
 			{
 				bso::sBool Success = true;
 			qRH
-				str::wStrings Ids, Types, ParametersSets, ContentRetrievingMethods, FocusingMethods, SelectionMethods, Arguments;
+				str::wStrings Ids, Types, ParametersSets, ContentRetrievingMethods, FocusingMethods, SelectionMethods, TagValues;
 				str::wString FlatIds, FlatTypes, FlatParametersSets, FlatContentRetrievingMethods, FlatFocusingMethods, FlatSelectionMethods;
 			qRB
 				tol::Init(Ids, Types, ParametersSets, ContentRetrievingMethods, FocusingMethods, SelectionMethods);
@@ -449,15 +451,10 @@ namespace {
 					tol::Init(FlatIds, FlatTypes, FlatParametersSets, FlatContentRetrievingMethods, FlatFocusingMethods, FlatSelectionMethods);
 					HandleWidgets_( Ids, Types, ParametersSets, ContentRetrievingMethods, FocusingMethods, SelectionMethods, FlatIds, FlatTypes, FlatParametersSets, FlatContentRetrievingMethods, FlatFocusingMethods, FlatSelectionMethods );
 
-					Arguments.Init();
-					Arguments.Append(FlatIds);
-					Arguments.Append(FlatTypes);
-					Arguments.Append(FlatParametersSets);
-					Arguments.Append(FlatContentRetrievingMethods);
-					Arguments.Append(FlatFocusingMethods);
-					Arguments.Append(FlatSelectionMethods);
+					TagValues.Init();
+					TagValues.AppendMulti(FlatIds, FlatTypes, FlatParametersSets, FlatContentRetrievingMethods, FlatFocusingMethods, FlatSelectionMethods);
 
-					Success = BaseProcess_(ss_::InstantiateWidgets, Arguments, Callback);
+					Success = BaseProcess_(ss_::InstantiateWidgets, TagValues, Callback);
 				}
 			qRR
 			qRT
@@ -470,7 +467,8 @@ namespace {
 			const char *ScriptName,
 			const str::dStrings &Values,
 			xdhcuc::cSingle &Callback,
-			tht::rBlocker &Blocker )
+			tht::rBlocker &Blocker,
+			bso::sBool *SuccessPointer)
 		{
 			bso::sBool Success = false;
 		qRH
@@ -479,7 +477,7 @@ namespace {
 		qRB
 			Digests.Init();
 
-			if ( ( Success = ExecuteAndGetDigest_(ScriptName, Values, Callback, Digests, Blocker) ) ) {
+			if ( ( Success = ExecuteAndGetDigest_(ScriptName, Values, Callback, Digests, Blocker, SuccessPointer) ) ) {
 				Retriever.Init(Digests);
 
 				tol::Init(EventsDigest, WidgetsDigest);
@@ -487,8 +485,9 @@ namespace {
 				Retriever.GetTable(EventsDigest);
 				Retriever.GetTable(WidgetsDigest);
 
-				if ( ( Success = HandleEvents_(EventsDigest, Callback) ) )
-					Success = HandleWidgets_(WidgetsDigest, Callback);
+				if ( ( Success = HandleEvents_(EventsDigest, Callback) ) ) {
+          Success = HandleWidgets_(WidgetsDigest, Callback);
+				}
 			}
 		qRR
 		qRE
@@ -500,6 +499,7 @@ namespace {
 			struct sShared_ {
 				const char *ScriptName;
 				const str::dStrings *Values;
+				bso::sBool Success;
 				xdhcuc::cSingle *Callback;
 			};
 		}
@@ -510,31 +510,41 @@ namespace {
 		{
 				sShared_ &Shared = *(sShared_ *)UP;
 
-				if ( !HandleLayout_(Shared.ScriptName, *Shared.Values, *Shared.Callback, Blocker.Blocker() ) )
-					qRGnr();
+				if ( !HandleLayout_(Shared.ScriptName, *Shared.Values, *Shared.Callback, Blocker.Blocker(), &Shared.Success ) )
+					qRGnr();  // NOTA: failure handled by launching thread through 'Shared.Success'.
 		}
 
 		bso::sBool HandleLayout_(
 			const char *ScriptName,
 			const str::dStrings &Values,
-			xdhcuc::cSingle &Callback )
+			xdhcuc::cSingle &Callback,
+			str::dString *ReturnValue)
 		{
 			sShared_ Shared;
 
+			if ( ScriptName !=psn_::HandleLayout )
+        qRFwk();
+
 			Shared.ScriptName = ScriptName;
 			Shared.Values = &Values;
+			Shared.Success = false;
 			Shared.Callback = &Callback;
 
-			if ( false )
-				mtk::Launch(HandleLayoutRoutine_, &Shared);	// Conflicts with broadcasting.
+			if ( true )
+				mtk::Launch(HandleLayoutRoutine_, &Shared);	// Was conflicting with broadcasting.
 			else
 				mtk::SyncLaunch(HandleLayoutRoutine_, &Shared);	// In this case, with the 'arora' browser, dealing with XSL will blocks all the clients.
 
-			/* The 'HandleLayout' primitive awaits a value from client, which is NOT sent to the backend. Hence, the backend send the next script
-			immediately after the 'HandleLayout'. If the client does not answer, it blocks all the other clients. To avoid this, the answer on a
-			'HandleLayout' is red and handled asynchronously. This issue occurs with the 'arora' web browser. */
+			/*
+			The 'HandleLayout' primitive awaits a value from client, which is NOT sent to the backend. But an empty return value is sent to
+			the backend to avoid launching a command which returned value replaces the one awaited by the 'HandleLayout' primitive.
+			The settings of event handler and widget handler is done asynchronously and should be achieved before next command.
+			*/
 
-			return true;
+			if ( ReturnValue != NULL )  // If == NULL, old deprecated behavior : no (dummy) value sent to backend.
+        *ReturnValue = str::Empty; // To synchronize calling functions.
+
+			return Shared.Success;
 		}
 
 	}
@@ -562,26 +572,69 @@ namespace {
 		str::dString *ReturnValue)
 	{
 		if ( IsEqual_(ScriptName, psn_::HandleLayout) )
-			return HandleLayout_(psn_::HandleLayout, Values, Callback);
+			return HandleLayout_(psn_::HandleLayout, Values, Callback, ReturnValue);
 		else
-			return BaseProcess_(ScriptName, Values, Callback, NULL, ReturnValue);
+			return BaseProcess_(ScriptName, Values, Callback, NULL, NULL, ReturnValue);
+	}
+
+	template <typename ts, typename tl> bso::sBool Process_(
+		const ts &TaggedScript,
+		const tl &MergedTagList,
+		const str::dStrings &TagValues,
+		xdhcuc::cSingle &Callback,
+		str::dString *ReturnValue = NULL)
+	{
+		bso::sBool Success = false;
+	qRH
+		str::wString Script;
+		str::wStrings TagList;
+	qRB
+		TagList.Init();
+		Split_(str::wString(MergedTagList), TagList);
+
+		Script.Init();
+		SubstituteTags_(str::wString(TaggedScript), TagList, TagValues, Script);
+
+		Success = Callback.Process(Script, NULL, NULL, ReturnValue);
+	qRR
+	qRT
+	qRE
+		return Success;
 	}
 }
 
 bso::sBool xdhdws::sProxy::Process(
 	const char *ScriptName,
-	const str::dStrings &Values,
+	const str::dStrings &TagValues,
 	str::dString *ReturnValue )
 {
-	return Process_(ScriptName, Values, C_(), ReturnValue);
+	return Process_(ScriptName, TagValues, C_(), ReturnValue);
 }
 
 bso::sBool xdhdws::sProxy::Process(
 	const str::dString &ScriptName,
-	const str::dStrings &Values,
+	const str::dStrings &TagValues,
 	str::dString *ReturnValue )
 {
-	return Process_(ScriptName, Values, C_(), ReturnValue);
+	return Process_(ScriptName, TagValues, C_(), ReturnValue);
+}
+
+bso::sBool xdhdws::sProxy::Process(
+	const char *TaggedScript,
+	const char *TagList,
+	const str::dStrings &TagValues,
+	str::dString *ReturnValue )
+{
+	return Process_(TaggedScript, TagList, TagValues, C_(), ReturnValue);
+}
+
+bso::sBool xdhdws::sProxy::Process(
+	const str::dString &TaggedScript,
+	const char *TagList,
+	const str::dStrings &TagValues,
+	str::dString *ReturnValue )
+{
+	return Process_(TaggedScript, TagList, TagValues, C_(), ReturnValue);
 }
 
 namespace {

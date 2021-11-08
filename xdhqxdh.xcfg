@@ -49,6 +49,7 @@
  launchEvent('%Id%|BROADCAST|broadcast||((broadcast|%Action%))');
 }
 		        ]]>    </Script>
+    <Script name="RawSend_1" Arguments="#Data"><![CDATA[%#Data%]]>    </Script>
     <Script name="Execute_1" Arguments="#Script"><![CDATA[
 {
   %#Script%
@@ -93,7 +94,7 @@
 		getElement(id).insertAdjacentHTML("%Variant%", getLayoutHTML(xml, xsl));
   }
 
-  var digests = fetchEventHandlersAndWidgest(getElement(id).parentElement);
+  var digests = fetchEventHandlersAndWidgets(getElement(id).parentElement);
   digests;  // Not returned to user. Splitted and given after processing to 'SetEnventHandlers_1' and  InstantiateWidgets_1' above internal scripts.
 }
         ]]>    </Script>
@@ -215,6 +216,16 @@
     <Script name="Flush_1" Arguments=""><![CDATA[
 {
   ""; // To wait that all pending commands were executed.
+}
+        ]]>    </Script>
+    <Script name="DebugLog_1" Arguments="Switch"><![CDATA[
+{
+		var debugLog = %Switch%;
+}
+        ]]>    </Script>
+    <Script name="Log_1" Arguments="Message"><![CDATA[
+{
+		console.log("%Message%");
 }
         ]]>    </Script>
     <Script name="" Arguments=""><![CDATA[

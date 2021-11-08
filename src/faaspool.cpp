@@ -40,7 +40,7 @@ using namespace faaspool;
 
 namespace {
 	qCDEF( char *, ProtocolId_, "9efcf0d1-92a4-4e88-86bf-38ce18ca2894" );
-	qCDEF(csdcmn::sVersion, LastVersion_, 0);
+	qCDEF( csdcmn::sVersion, LastVersion_, 0 );
 
 	namespace registry_ {
 		namespace parameter {
@@ -68,7 +68,6 @@ namespace {
 
 	// Handling of the connection timeout.
 	namespace connection_timeout_ {
-
 		qROW( Row );	// Connection Timeout row
 
 		namespace {
@@ -209,6 +208,7 @@ namespace faaspool {
 		mtx::rMutex Access;
 		tht::rBlocker Switch;
 		bso::sBool GiveUp;
+		csdcmn::sVersion ProtocolVersion;
 		str::wString
 			IP,
 			Token,
@@ -237,6 +237,7 @@ namespace faaspool {
 			Shareds.reset( P );
 			Access = mtx::Undefined;
 			Switch.reset( P );
+			ProtocolVersion = csdcmn::UnknownVersion;
 			tol::reset(P, IP, Token, Head);
 			GiveUp = false;	// If at 'true', the client is deemed to be disconnected.
 		}
@@ -245,6 +246,7 @@ namespace faaspool {
 			sBRow_ Row,
 			sRow TRow,
 			fdr::rRWDriver &Driver,
+			csdcmn::sVersion ProtocolVersion,
 			const str::dString &IP,
 			const str::dString &Token,
 			const str::dString &Head)
@@ -260,6 +262,7 @@ namespace faaspool {
 			Shareds.Init();
 			Access = mtx::Create();
 			Switch.Init();
+			this->ProtocolVersion = ProtocolVersion;
 			this->IP.Init( IP );
 			this->Token.Init(Token);
 			this->Head.Init(Head);
@@ -495,6 +498,7 @@ namespace faaspool {
 
 	rBackend_ *Create_(
 		fdr::rRWDriver &Driver,
+		csdcmn::sVersion ProtocolVersion,
 		const str::dString &IP,
 		const str::dString &Token,
 		const str::dString &Head )
@@ -521,7 +525,7 @@ namespace faaspool {
 			if ( (Backend = new rBackend_) == NULL )
 				qRAlc();
 
-			Backend->Init(Row, common::GetCallback().Create(Token), Driver, IP, Token, Head);
+			Backend->Init(Row, common::GetCallback().Create(Token), Driver, ProtocolVersion, IP, Token, Head);
 
 			Backends_.Store( Backend, Row );
 		}
@@ -619,34 +623,37 @@ namespace {
 	qRE;
 	}
 
-	void Handshake_( fdr::rRWDriver &Driver )
+	csdcmn::sVersion Handshake_( fdr::rRWDriver &Driver )
 	{
+	  csdcmn::sVersion Version = csdcmn::UnknownVersion;
 	qRH;
 		flw::rDressedRWFlow<> Flow;
 	qRB;
 		Flow.Init( Driver );
 
-		switch ( csdcmn::GetProtocolVersion( ProtocolId_, LastVersion_, Flow ) ) {
-		case LastVersion_:
-			Put_( "", Flow );
-			Notify_( NULL, Flow );
-			Flow.Commit();
-			break;
+		switch ( Version = csdcmn::GetProtocolVersion( ProtocolId_, LastVersion_, Flow ) ) {
 		case csdcmn::UnknownVersion:
 			Put_( "\nUnknown FaaS protocol version!\n", Flow );
 			Flow.Commit();
 			qRGnr();
+			break;
 		case csdcmn::BadProtocol:
 			Put_( "\nUnknown FaaS protocol!\n", Flow );
 			Flow.Commit();
 			qRGnr();
+			break;
 		default:
-			qRUnx();
+		  if ( Version > LastVersion_ )
+        qRUnx();
+			Put_( "", Flow );
+			Notify_( NULL, Flow );
+			Flow.Commit();
 			break;
 		}
 	qRR;
 	qRT;
 	qRE;
+    return Version;
 	}
 
 	const str::dString &BuildURL_(
@@ -680,7 +687,6 @@ namespace {
 		return URL;
 	}
 
-namespace {
 	template <typename string> void Log_(
 		const str::dString &IP,
 		const str::dString &Token,
@@ -696,10 +702,10 @@ namespace {
 	qRT;
 	qRE;
 	}
-}
 
 	rBackend_ *CreateBackend_(
 		fdr::rRWDriver &Driver,
+		csdcmn::sVersion ProtocolVersion,
 		const str::dString &IP )
 	{
 		rBackend_ *Backend = NULL;
@@ -720,7 +726,7 @@ namespace {
 			Get_(Flow, Address);    // Address to which the toolkit has connected.
 			Get_(Flow, Misc);
 
-			if ( (Backend = Create_( Driver, IP, Token, Head )) == NULL ) {
+			if ( ( Backend = Create_( Driver, ProtocolVersion, IP, Token, Head ) ) == NULL ) {
 				ErrorMessage.Init();
 				sclm::GetBaseTranslation( "TokenAlreadyInUse", ErrorMessage, Token );
 				Token.Init();	// To report backend that there is an error.
@@ -754,70 +760,79 @@ namespace {
 		return Backend;
 	}
 
-	namespace {
-		void BroadcastScript_(
-			flw::rRFlow &Flow,
-			sRow TRow)
-		{
-		qRH
-			str::wString Script;
-		qRB
-			Script.Init();
+  void BroadcastScript_(
+    flw::rRFlow &Flow,
+    sRow TRow)
+  {
+  qRH
+    str::wString Script;
+  qRB
+    Script.Init();
 
-			prtcl::Get(Flow, Script);
+    prtcl::Get(Flow, Script);
 
-			Flow.Dismiss();
+    Flow.Dismiss();
 
-			common::GetCallback().Broadcast(Script, TRow);
-		qRR
-		qRT
-		qRE
-		}
+    common::GetCallback().Broadcast(Script, TRow);
+  qRR
+  qRT
+  qRE
+  }
 
-		void BroadcastAction_(
-			flw::rRFlow &Flow,
-			sRow TRow)
-		{
-		qRH
-			str::wString Action, Id;
-		qRB
-			tol::Init(Action, Id);
+  void BroadcastAction_(
+    flw::rRFlow &Flow,
+    sRow TRow)
+  {
+  qRH
+    str::wString Action, Id;
+  qRB
+    tol::Init(Action, Id);
 
-			prtcl::Get(Flow, Action);
-			prtcl::Get(Flow, Id);
+    prtcl::Get(Flow, Action);
+    prtcl::Get(Flow, Id);
 
-			Flow.Dismiss();
+    Flow.Dismiss();
 
-			xdhdws::BroadcastAction(common::GetCallback(), Action, Id, TRow);
-		qRR
-		qRT
-		qRE
-		}
-	}
+    xdhdws::BroadcastAction(common::GetCallback(), Action, Id, TRow);
+  qRR
+  qRT
+  qRE
+  }
 
-	namespace {
-		void Unblock_(const dShareds_ &Shareds)
-		{
-			sFRow_ Row = Shareds.First();
+  void Unblock_(const dShareds_ &Shareds)
+  {
+    sFRow_ Row = Shareds.First();
 
-			while ( Row != qNIL ) {
-				Shareds(Row)->UnblockAndQuit();
+    while ( Row != qNIL ) {
+      Shareds(Row)->UnblockAndQuit();
 
-				Row = Shareds.Next(Row);
-			}
-		}
-	}
+      Row = Shareds.Next(Row);
+    }
+  }
+
+  void Release_(
+    flw::rWFlow &Flow,
+    sId Id )
+  {
+    PutId(upstream::ClosingId, Flow);
+    PutId(Id, Flow);
+
+    Flow.Commit();
+  }
 
 	void HandleSwitching_(
+    const str::dString &IP,
+    const str::dString &Token,
 		fdr::rRWDriver &Driver,
 		sRow TRow,
 		const dShareds_ &Shareds,
 		tht::rBlocker &Blocker )
 	{
 	qRH;
-		flw::rDressedRFlow<> Flow;
+		flw::rDressedRWFlow<> Flow;
 		sId Id = UndefinedId;
 		bso::sBool IsError = false;
+		str::wString Input;
 	qRB;
 		Flow.Init( Driver );
 
@@ -833,8 +848,17 @@ namespace {
 				qRGnr();
 
 			switch( Id ) {
-			case UndefinedId:	// Should never happen.
-				qRGnr();
+			case UndefinedId:
+			  Input.Init();
+			  prtcl::Get(Flow, Input);
+
+				if ( Input != xdhcmn::faas::ScriptNameForInform )
+          qRGnr();
+
+        Input.Init();
+        prtcl::Get(Flow, Input);
+
+        Log_(IP, Token, Input);
 				break;
 			case downstream::BroadcastScriptId:
 				BroadcastScript_(Flow, TRow);
@@ -844,13 +868,12 @@ namespace {
 				break;
 			default:
 				if ( !Shareds.Exists( Id ) ) {
-					Id = UndefinedId;
-					qRGnr();
+            Release_(Flow, Id);
+				} else {
+          Shareds( Id )->UnblockReading();
+
+          Blocker.Wait();	// Waits until all data in flow red.
 				}
-
-				Shareds( Id )->UnblockReading();
-
-				Blocker.Wait();	// Waits until all data in flow red.
 				break;
 			}
 		}
@@ -872,6 +895,7 @@ namespace {
 	{
 	qRH;
 		sck::sSocket Socket = sck::Undefined;
+		csdcmn::sVersion ProtocolVersion = csdcmn::UnknownVersion;
 		str::wString IP;
 		sck::rRWDriver Driver;
 		rBackend_ *Backend = NULL;
@@ -888,10 +912,10 @@ namespace {
 
 		Driver.Init( Socket, false, fdr::ts_Default );
 
-		Handshake_( Driver );
+		ProtocolVersion = Handshake_( Driver );
 
-		if ( ( Backend = CreateBackend_( Driver, IP ) ) != NULL ) {
-			HandleSwitching_( Driver, Backend->TRow, Backend->Shareds, Backend->Switch );	// Does not return until disconnection or error.
+		if ( ( Backend = CreateBackend_(Driver, ProtocolVersion, IP) ) != NULL ) {
+			HandleSwitching_(IP, Backend->Token, Driver, Backend->TRow, Backend->Shareds, Backend->Switch );	// Does not return until disconnection or error.
 		}
 	qRR;
 		sclm::ErrorDefaultHandling();	// Also resets the error, otherwise the `WaitUntilNoMoreClient()` will lead to a deadlock on next error.
@@ -1010,7 +1034,7 @@ qRB;
 			PutId( upstream::CreationId, Flow );	// To signal to the back-end a new connection.
 			PutId( Shared.Id, Flow );	// The id of the new front-end.
 			Flow.Commit();
-		}  else
+		} else
 			Backend = NULL;
 	}
 qRR;
@@ -1026,8 +1050,7 @@ qRH
 qRB
 	Flow.Init(D_());
 
-	PutId(upstream::ClosingId, Flow);
-	PutId(Shared_.Id, Flow);
+	::Release_(Flow, Shared_.Id);
 
 	Flow.reset();	// Commits and frees the underlying driver, or the below 'Release' will block.
 qRR
