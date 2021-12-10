@@ -20,6 +20,7 @@
 #include "session.h"
 
 #include "common.h"
+#include "slfhlead.h"
 
 #include "xdhutl.h"
 
@@ -215,18 +216,18 @@ namespace {
 
 bso::sBool session::rSession::XDHCDCInitialize(
 	xdhcuc::cSingle &Callback,
+			tht::rLocker &CallbackLocker, // Avoid destruction of above 'Callback' while being used.
 	const char *Language,
 	const str::dString &Token,
 	const str::dString &UserId)
 {
 	bso::sBool Success = false;
-qRH;
-	flw::rDressedRWFlow<> Flow;
-	csdcmn::sVersion Version = csdcmn::UnknownVersion;
-qRB;
+qRFH;
+	flw::rDressedWFlow<> Flow;
+qRFB;
 	if ( Token.Amount() == 0 ) {
-			if ( common::CoreIsInitialized() ) {
-				SlfHDriver_.Init( common::Core(), fdr::ts_Default );
+			if ( slfhlead::CoreIsInitialized() ) {
+				SlfHDriver_.Init( slfhlead::Core(), fdr::ts_Default );
 				Mode_ = mSlfH;
 				Success = true;
 			} else
@@ -241,23 +242,6 @@ qRB;
 	if ( Success ) {
 		Flow.Init( D_() );
 
-		Version = csdcmn::GetProtocolVersion( prtcl::ProtocolId, prtcl::ProtocolLastVersion, Flow );
-		Flow.Dismiss();
-
-		switch ( Version ) {
-		case csdcmn::UnknownVersion:
-			ReportErrorToBackend_( "\nUnknown protocol version!\n", Flow );
-			break;
-		case csdcmn::BadProtocol:
-			ReportErrorToBackend_( "\nUnknown protocol!\n", Flow );
-			break;
-		default:
-		  if ( Version > prtcl::ProtocolLastVersion )
-        qRUnx();
-			ReportNoErrorToBackend_( Flow );
-			break;
-		}
-
 		prtcl::Put( Language, Flow );
 		Flow.Commit();
 
@@ -271,11 +255,12 @@ qRB;
 		Log_(Id_, IP_, Token.Amount() ? Token : SelfHostingLabel_);	// Avoids above problem, and also string creation.
 #endif
 
-		xdhdws::sProxy::Init(Callback, Token);	// Has to be last, otherwise, if an error occurs, 'Callback' will be freed twice!
+		xdhdws::sProxy::Init(Callback, CallbackLocker);	// Must be last, otherwise, if an error occurs, 'Callback' will be freed twice!
 	}
-qRR;
-qRT;
-qRE;
+qRFR;
+  Success = false;
+qRFT;
+qRFE(sclm::ErrorDefaultHandling());
 	return Success;
 }
 
@@ -304,15 +289,15 @@ qRB;
 
 		if ( !ScriptName.Amount() )
       qRGnr();
-    else if ( ScriptName(ScriptName.First()) == faas_::SpecialScriptNameMarker ) {
-      if ( ScriptName == faas_::ScriptNameForStandBy ) {
+    else if ( ScriptName(ScriptName.First()) == xdhcmn::SpecialScriptNameMarker ) {
+      if ( ScriptName == xdhcmn::ScriptNameForStandBy ) {
         Flow.Dismiss();
         break;
-      } else if ( ScriptName == faas_::ScriptNameForDismiss ) {
+      } else if ( ScriptName == xdhcmn::ScriptNameForDismiss ) {
         Flow.Dismiss();
         Cont = false;
         break;
-      } else if ( ScriptName == faas_::ScriptNameForInform ) {
+      } else if ( ScriptName == xdhcmn::ScriptNameForInform ) {
         Message.Init();
         prtcl::Get(Flow, Message);
         Flow.Dismiss();

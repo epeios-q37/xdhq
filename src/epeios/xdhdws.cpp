@@ -42,12 +42,22 @@ namespace psn_ {	// Patched Script Name
 }
 
 namespace {
+  rgstry::rEntry Scripts_("Scripts", sclr::Definitions);
+}
+
+namespace {
+  rgstry::rEntry ScriptsVersion_("@Version", Scripts_);
+}
+
+sScriptsVersion xdhdws::GetScriptsVersion(void)
+{
+  return sclm::MGetU8(ScriptsVersion_);
+}
+
+namespace {
 	namespace {
 		namespace {
 			namespace {
-				namespace {
-					rgstry::rEntry Scripts_("Scripts", sclr::Definitions);
-				}
 				rgstry::rEntry LooseScript_("Script", Scripts_);
 			}
 
@@ -467,17 +477,21 @@ namespace {
 			const char *ScriptName,
 			const str::dStrings &Values,
 			xdhcuc::cSingle &Callback,
-			tht::rBlocker &Blocker,
+			tht::rLocker &CallbackLocker, // Ensure that above 'Callback' is not prematurely destroyed.
+			tht::rBlocker &ReturnValueBlocker, // Ensure that the potential return value is read before another primitive is launched.
 			bso::sBool *SuccessPointer)
 		{
 			bso::sBool Success = false;
 		qRH
 			xdhcmn::digest Digests, EventsDigest, WidgetsDigest;
 			xdhcmn::retriever__ Retriever;
+			tht::rLockerHandler Lock;
 		qRB
+      Lock.Init(CallbackLocker);  // Also locks. Unlocks automatically when destructed.
+
 			Digests.Init();
 
-			if ( ( Success = ExecuteAndGetDigest_(ScriptName, Values, Callback, Digests, Blocker, SuccessPointer) ) ) {
+			if ( ( Success = ExecuteAndGetDigest_(ScriptName, Values, Callback, Digests, ReturnValueBlocker, SuccessPointer) ) ) {
 				Retriever.Init(Digests);
 
 				tol::Init(EventsDigest, WidgetsDigest);
@@ -501,6 +515,7 @@ namespace {
 				const str::dStrings *Values;
 				bso::sBool Success;
 				xdhcuc::cSingle *Callback;
+				tht::rLocker *CallbackLocker;
 			};
 		}
 
@@ -510,7 +525,7 @@ namespace {
 		{
 				sShared_ &Shared = *(sShared_ *)UP;
 
-				if ( !HandleLayout_(Shared.ScriptName, *Shared.Values, *Shared.Callback, Blocker.Blocker(), &Shared.Success ) )
+				if ( !HandleLayout_(Shared.ScriptName, *Shared.Values, *Shared.Callback, *Shared.CallbackLocker, Blocker.Blocker(), &Shared.Success ) )
 					qRGnr();  // NOTA: failure handled by launching thread through 'Shared.Success'.
 		}
 
@@ -518,6 +533,7 @@ namespace {
 			const char *ScriptName,
 			const str::dStrings &Values,
 			xdhcuc::cSingle &Callback,
+			tht::rLocker &CallbackLocker,
 			str::dString *ReturnValue)
 		{
 			sShared_ Shared;
@@ -529,6 +545,7 @@ namespace {
 			Shared.Values = &Values;
 			Shared.Success = false;
 			Shared.Callback = &Callback;
+			Shared.CallbackLocker = &CallbackLocker;
 
 			if ( true )
 				mtk::Launch(HandleLayoutRoutine_, &Shared);	// Was conflicting with broadcasting.
@@ -569,10 +586,11 @@ namespace {
 		const type &ScriptName,
 		const str::dStrings &Values,
 		xdhcuc::cSingle &Callback,
-		str::dString *ReturnValue)
+    tht::rLocker &CallbackLocker,
+    str::dString *ReturnValue)
 	{
 		if ( IsEqual_(ScriptName, psn_::HandleLayout) )
-			return HandleLayout_(psn_::HandleLayout, Values, Callback, ReturnValue);
+			return HandleLayout_(psn_::HandleLayout, Values, Callback, CallbackLocker, ReturnValue);
 		else
 			return BaseProcess_(ScriptName, Values, Callback, NULL, NULL, ReturnValue);
 	}
@@ -608,7 +626,7 @@ bso::sBool xdhdws::sProxy::Process(
 	const str::dStrings &TagValues,
 	str::dString *ReturnValue )
 {
-	return Process_(ScriptName, TagValues, C_(), ReturnValue);
+	return Process_(ScriptName, TagValues, C_(), L_(), ReturnValue);
 }
 
 bso::sBool xdhdws::sProxy::Process(
@@ -616,7 +634,7 @@ bso::sBool xdhdws::sProxy::Process(
 	const str::dStrings &TagValues,
 	str::dString *ReturnValue )
 {
-	return Process_(ScriptName, TagValues, C_(), ReturnValue);
+	return Process_(ScriptName, TagValues, C_(), L_(), ReturnValue);
 }
 
 bso::sBool xdhdws::sProxy::Process(
@@ -662,7 +680,7 @@ namespace {
 		xdhcuc::cGlobal &Callback,
 		const action &Action,
 		const id &Id,
-		faas::sRow FaasRow)
+		faas::sRow FaaSRow)
 	{
 	qRH
 		str::wString Script;
@@ -670,7 +688,7 @@ namespace {
 		Script.Init();
 		GetBroadcastActionScript_(Action, Id, Script);
 
-		Callback.Broadcast(Script, FaasRow);
+		Callback.Broadcast(Script, FaaSRow);
 	qRR
 	qRT
 	qRE
@@ -681,16 +699,16 @@ void xdhdws::BroadcastAction(
 	xdhcuc::cGlobal &Callback,
 	const char *Action,
 	const char *Id,
-	faas::sRow FaasRow)
+	faas::sRow FaaSRow)
 {
-	BroadcastAction_(Callback, Action, Id, FaasRow);
+	BroadcastAction_(Callback, Action, Id, FaaSRow);
 }
 
 void xdhdws::BroadcastAction(
 	xdhcuc::cGlobal &Callback,
 	const str::dString &Action,
 	const str::dString &Id,
-	faas::sRow FaasRow)
+	faas::sRow FaaSRow)
 {
-	BroadcastAction_(Callback, Action, Id, FaasRow);
+	BroadcastAction_(Callback, Action, Id, FaaSRow);
 }

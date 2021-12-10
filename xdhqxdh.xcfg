@@ -13,13 +13,22 @@
   <Definitions>
    <FaaS>
     <URL>http://%Address%%Service%/xdh.php?_token=%Token%</URL>
-    <Notification><![CDATA[
+    <Notifications>
+     <DefaultNotification><![CDATA[
 ****************************************************************************
      Your application is connected to the free public server. Welcome!
      THIS SERVICE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
      EXPRESS OR IMPLIED. THE USE OF THIS SERVICE IS AT YOUR OWN RISK.
 ****************************************************************************
-					]]>    </Notification>
+					]]>     </DefaultNotification>
+     <Notification flavour="PYH"><![CDATA[
+****************************************************************************
+     Your application is connected to the free public server. Welcome!
+     THIS SERVICE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+     EXPRESS OR IMPLIED. THE USE OF THIS SERVICE IS AT YOUR OWN RISK.
+****************************************************************************
+					]]>     </Notification>
+    </Notifications>
    </FaaS>
    <Plugins target="Token">
     <Plugin id="Forbidden">
@@ -33,7 +42,7 @@
      <Locale/>
     </Plugin>
    </Plugins>
-   <Scripts>
+   <Scripts Version="0">
     <Script name="@SetEventHandlers_1" Arguments="#Ids,#Events"><![CDATA[
 {
   setEventHandlers( %#Ids%, %#Events% );

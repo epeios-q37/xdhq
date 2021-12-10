@@ -19,40 +19,11 @@
 
 #include "common.h"
 
+#include "prtcl.h"
+
+#include "xdhdws.h"
+
 using namespace common;
-
-namespace {
-	csdmnc::rCore Core_;
-	bso::sBool CoreIsInitialized_ = false;
-}
-
-bso::sBool common::InitializeCore(
-		const char *HostService,
-		bso::uint__ PingDelay,
-		sck::duration__ Timeout,
-		csdmnc::cLog *LogCallback)
-{
-		if ( CoreIsInitialized_ )
-			qRFwk();
-
-		if ( Core_.Init(HostService, PingDelay, Timeout, LogCallback) ) {
-			CoreIsInitialized_ = true;
-			return true;
-		} else
-			return false;
-}
-
-bso::sBool common::CoreIsInitialized(void)
-{
-	return CoreIsInitialized_;
-}
-
-csdmnc::rCore &common::Core(void) {
-	if ( !CoreIsInitialized_ )
-		qRGnr();
-
-	return Core_;
-}
 
 logq::rFDriver<> common::LogDriver;
 
@@ -77,3 +48,67 @@ xdhcuc::cGlobal &common::GetCallback(void)
 {
 	return C_();
 }
+
+namespace {
+  void ReportErrorToBackend_(
+    const char *Message,
+    flw::rWFlow &Flow )
+  {
+    if ( Message == NULL )
+      Message = "";
+
+    prtcl::Put(Message, Flow);	// If 'Message' not empty, client will display content and abort.
+
+    if ( Message[0] ) {
+      Flow.Commit();
+      qRGnr();
+    }
+  }
+
+  void ReportNoErrorToBackend_( flw::rWFlow &Flow )
+  {
+    ReportErrorToBackend_(NULL, Flow);
+  }
+
+  void HandleScriptsVersion_(flw::rRWFlow &Flow)
+  {
+    switch( csdcmn::GetVersion(xdhdws::GetScriptsVersion(), Flow) ) {
+    case csdcmn::UnknownVersion:
+      ReportErrorToBackend_( "\nUnknown scripts version!\n", Flow );
+      break;
+    case csdcmn::BadProtocol:
+      ReportErrorToBackend_( "\nBad protocol!\n", Flow );
+      break;
+    default:
+      // Nothing to do. Handled Upstream.
+      break;
+    }
+  }
+}
+
+void common::Handshake(flw::rRWFlow &Flow)
+{
+  csdcmn::sVersion Version = csdcmn::GetProtocolVersion( prtcl::ProtocolId, prtcl::ProtocolLastVersion, Flow );
+
+  Flow.Dismiss();
+
+  switch ( Version ) {
+  case csdcmn::UnknownVersion:
+    ReportErrorToBackend_( "\nUnknown protocol version!\n", Flow );
+    break;
+  case csdcmn::BadProtocol:
+    ReportErrorToBackend_( "\nUnknown protocol!\n", Flow );
+    break;
+  default:
+    if ( Version > prtcl::ProtocolLastVersion ) // Case handled by 'csdcmn::GetProtocolVersion(…)'.
+      qRUnx();
+
+    HandleScriptsVersion_(Flow);
+
+    ReportNoErrorToBackend_( Flow );
+
+    prtcl::Put("", Flow); // No notification yet ; for future use.
+    break;
+  }
+}
+

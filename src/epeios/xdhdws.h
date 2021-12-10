@@ -28,6 +28,7 @@
 
 // X(SL) DH(TML) DowNStream
 
+# include "xdhcmn.h"
 # include "xdhcuc.h"
 
 # include "err.h"
@@ -40,23 +41,32 @@ namespace xdhdws {
 		using namespace xdhcmn::faas;
 	}
 
+	typedef bso::sU8 sScriptsVersion;
+
+	sScriptsVersion GetScriptsVersion(void);
+
 	class sProxy
 	{
 	private:
+	  Q37_MRMDF( tht::rLocker, L_, Locker_ );
 		Q37_MRMDF( xdhcuc::cSingle, C_, Callback_ );
 	public:
 		void reset( bso::bool__ P = true )
 		{
+		  Locker_ = NULL;
 			Callback_ = NULL;
 		}
 		E_CVDTOR( sProxy );
-		void Init(
-			xdhcuc::cSingle &Callback,
-			const str::dString &Token)
+		bso::sBool Init(
+      xdhcuc::cSingle &Callback,
+      tht::rLocker &Locker )
 		{
 			reset();
 
 			Callback_ = &Callback;
+			Locker_ = &Locker;
+
+			return true;
 		}
 		bso::sBool Process(
 			const char *ScriptName,
@@ -97,13 +107,13 @@ namespace xdhdws {
 		xdhcuc::cGlobal &Callback,
 		const char *Action,
 		const char *Id,
-		faas::sRow FaasRow);
+		faas::sRow FaaSRow);
 
 	void BroadcastAction(
 		xdhcuc::cGlobal &Callback,
 		const str::dString &Action,
 		const str::dString &Id,
-		faas::sRow FaasRow);
+		faas::sRow FaaSRow);
 }
 
 #endif

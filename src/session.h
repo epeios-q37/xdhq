@@ -42,6 +42,7 @@ namespace session {
 
 	qMIMICs( bso::sU32, sId_ );	// Assigned per session.
 	qCDEF(sId_, UndefinedId_, bso::U32Max);
+
 	void Release_(
 		sId_ Id,
 		const str::dString &IP);
@@ -83,24 +84,6 @@ namespace session {
 #endif
 
 		}
-		void ReportErrorToBackend_(
-			const char *Message,
-			flw::rWFlow &Flow )
-		{
-			if ( Message == NULL )
-				Message = "";
-
-			prtcl::Put( Message, Flow );	// If 'Message' not empty, client will display content and abort.
-
-			if ( Message[0] ) {
-				Flow.Commit();
-				qRGnr();
-			}
-		}
-		void ReportNoErrorToBackend_( flw::rWFlow &Flow )
-		{
-			ReportErrorToBackend_( NULL, Flow );
-		}
 		void Broadcast_(flw::rRFlow &Flow);
 		void BroadcastAction_(flw::rRFlow &Flow);
 		bso::bool__ Launch_(
@@ -110,6 +93,7 @@ namespace session {
 	protected:
 		virtual bso::sBool XDHCDCInitialize(
 			xdhcuc::cSingle &Callback,
+			tht::rLocker &CallbackLocker, // Avoid destruction of above 'Callback' while being used.
 			const char *Language,
 			const str::dString &Token,
 			const str::dString &UserId) override;
