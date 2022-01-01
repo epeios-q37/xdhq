@@ -71,6 +71,7 @@ namespace {
 		tVoid,
 		tString,
 		tStrings,
+		tFaaSqRelated,  // Only used with 'FaaSq'. IF MODIFIED, SEE 'session.cpp' FROM 'FaaSq'.
 		t_amount,
 		t_Undefined
 	};
@@ -86,10 +87,11 @@ namespace {
 		return (eType_)Type;
 	}
 
-	void GetParameters_(
+	bso::sBool GetParameters_(
 		flw::rRFlow &Flow,
 		str::wStrings &Parameters )
 	{
+		bso::sBool IsFaaSq= false;
 	qRH
 		str::wString Value;
 		str::wStrings Values;
@@ -116,6 +118,13 @@ namespace {
 				Parameters.Append(Value);
 
 				break;
+      case tFaaSqRelated:
+        Value.Init();
+        prtcl::Get(Flow, Value);
+        xdhcmn::FlatSplit(Value, Parameters);
+        IsFaaSq = true;
+        Continue = false;
+        break;
 			default:
 				qRGnr();
 				break;
@@ -124,6 +133,7 @@ namespace {
 	qRR
 	qRE
 	qRT
+    return IsFaaSq;
 	}
 }
 
@@ -216,10 +226,8 @@ namespace {
 
 bso::sBool session::rSession::XDHCDCInitialize(
 	xdhcuc::cSingle &Callback,
-			tht::rLocker &CallbackLocker, // Avoid destruction of above 'Callback' while being used.
 	const char *Language,
-	const str::dString &Token,
-	const str::dString &UserId)
+	const str::dString &Token)
 {
 	bso::sBool Success = false;
 qRFH;
@@ -247,7 +255,6 @@ qRFB;
 
 		Id_ = id_store_::Fetch();
 		Token_ = Token;
-		UserId_ = UserId;
 
 #if 0
 		Log_(Id_, IP_, Token.Amount() ? Token : str::wString("SlfH"));	// This one calls wrongly the destructor of 'Token'.
@@ -255,7 +262,7 @@ qRFB;
 		Log_(Id_, IP_, Token.Amount() ? Token : SelfHostingLabel_);	// Avoids above problem, and also string creation.
 #endif
 
-		xdhdws::sProxy::Init(Callback, CallbackLocker);	// Must be last, otherwise, if an error occurs, 'Callback' will be freed twice!
+		xdhdws::sProxy::Init(Callback);	// Must be last, otherwise, if an error occurs, 'Callback' will be freed twice!
 	}
 qRFR;
   Success = false;
@@ -274,6 +281,7 @@ qRH;
 	str::wString ScriptName, ReturnValue, Message;
 	eType_ ReturnType = t_Undefined;
 	str::wStrings Parameters, SplitedReturnValue;
+	bso::sBool IsFaaSq = false; // Set to true if backand id 'FaaSq'.
 qRB;
 	Flow.Init(D_());
 
@@ -308,7 +316,7 @@ qRB;
 			ReturnType = GetType_( Flow );
 
 			Parameters.Init();
-			GetParameters_(Flow, Parameters);
+			IsFaaSq = GetParameters_(Flow, Parameters);
 
 			Flow.Dismiss();
 
@@ -329,13 +337,23 @@ qRB;
 			case tVoid:
 				break;
 			case tString:
+			  if ( IsFaaSq )
+          qRGnr();
 				prtcl::Put(ReturnValue, Flow);
 				Flow.Commit();
 				break;
 			case tStrings:
+			  if ( IsFaaSq )
+          qRGnr();
 				SplitedReturnValue.Init();
 				xdhcmn::FlatSplit(ReturnValue,SplitedReturnValue);
 				prtcl::Put(SplitedReturnValue, Flow);
+				Flow.Commit();
+				break;
+      case tFaaSqRelated:
+ 			  if ( !IsFaaSq )
+          qRGnr();
+				prtcl::Put(ReturnValue, Flow);
 				Flow.Commit();
 				break;
 			default:
@@ -351,30 +369,14 @@ qRE;
 	return Cont;
 }
 
-bso::bool__ session::rSession::Handle_( const char *EventDigest )
-{
-	bso::sBool Cont = true;
-qRH;
-	str::string Id, Action;
-qRB;
-	tol::Init(Id, Action);
-
-	if ( ( EventDigest == NULL ) || ( !EventDigest[0] ) )
-		Cont = Launch_(UserId_, str::Empty);
-	else if ( xdhutl::Extract(str::wString(EventDigest), Id, Action) )
-		Cont = Launch_(Id, Action);
-qRR;
-qRT;
-qRE;
-	return Cont;
-}
-
-bso::bool__ session::rSession::XDHCDCHandle( const char *EventDigest )
+bso::bool__ session::rSession::XDHCDCHandle(
+  const str::dString &Id,
+  const str::dString &Action)
 {
 	bso::sBool Cont = false;
 qRFH;
 qRFB;
-	Cont = Handle_( EventDigest );
+	Cont = Launch_(Id, Action);
 qRFR;
 qRFT;
 qRFE(sclm::ErrorDefaultHandling());

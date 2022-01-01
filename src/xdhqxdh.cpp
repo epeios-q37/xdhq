@@ -116,20 +116,20 @@ namespace {
 	: public cDownstream_
 	{
 	protected:
-		virtual void XDHCDCInitialize(
+		virtual xdhcmn::sScriptsVersion XDHCDCInitialize(
 			const xdhcdc::sData &Data,
 			xdhcuc::cGlobal &Callback) override
 		{
 			if ( Launcher_ != NULL )
 				qRFwk();
 
-			if ( Launcher_ == NULL ) {
-				Launcher_ = Data.LauncherIdentification();
-				sclm::Initialize( Data.SCLRack(), Data.Localization(), xdhqxdh::Info );
+      Launcher_ = Data.LauncherIdentification();
+      sclm::Initialize( Data.SCLRack(), Data.Localization(), xdhqxdh::Info );
 
-				Initialization_( Data.Mode() );
-				common::SetCallback(Callback);
-			}
+      Initialization_( Data.Mode() );
+      common::SetCallback(Callback);
+
+      return sclm::MGetU8(registry::definition::XDHTMLScriptsVersion);
 		}
 		virtual void XDHCDCBaseLanguage( TOL_CBUFFER___ &Buffer ) override
 		{

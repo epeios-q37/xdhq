@@ -1,6 +1,10 @@
 # *XDHq* *CHANGELOG*
 
-## 2020-10-01:
+## 2022-01-01
+
+- the primitives handling is moved upstream (*xdwhebq*),
+
+## 2020-10-01
 
 - retrieving HTML tag's default action handling from *XDHWebQ*,
 - implementing HTML tag's default action handling retrieved from the registry,
