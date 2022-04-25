@@ -8,7 +8,7 @@
     <Service>53700</Service>
     <ConnectionTimeout>90</ConnectionTimeout>
    </FaaS>
-   <Plugins/>
+   <Plugins></Plugins>
   </Parameters>
   <Definitions>
    <FaaS>
@@ -37,9 +37,9 @@
       <Parameters>
        <Command>Default</Command>
       </Parameters>
-      <Arguments/>
+      <Arguments></Arguments>
      </Configuration>
-     <Locale/>
+     <Locale></Locale>
     </Plugin>
    </Plugins>
    <XDHTML ScriptsVersion="0"/>
