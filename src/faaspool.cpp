@@ -39,8 +39,11 @@ using namespace faaspool;
 #include <time.h>
 
 namespace {
-	qCDEF( char *, ProtocolId_, "4c837d30-2eb5-41af-9b3d-6c8bf01d8dbf" );
-	qCDEF( csdcmn::sVersion, LastVersion_, 0 );
+  namespace protocol_ {
+    qCDEF( char *, Id, "4c837d30-2eb5-41af-9b3d-6c8bf01d8dbf" );
+    qCDEF( csdcmn::sVersion, LastVersion, 1 );
+    // Since V1: user part of the HTML head section is retrieved from backend on each new connection, and no more cached.
+  }
 
 	namespace registry_ {
 		namespace parameter {
@@ -192,7 +195,7 @@ namespace faaspool {
 		mtx::rMutex Mutex_;
 		bso::sBool PendingDismiss_;
 		// Prevents destruction of 'Driver_' until no more client use it.
-		tht::rBlocker Blocker_;
+		tht::rBlocker NoMoreClientBlocker_;
 		void InvalidAll_( void )
 		{
 			sFRow_ Row = Shareds.First();
@@ -210,12 +213,14 @@ namespace faaspool {
 		wShareds_ Shareds;
 		mtx::rMutex Access;
 		tht::rBlocker Switch;
+		tht::rBlocker HeadAccess;  // Control the access of the 'Head' member, on new behavior.
 		bso::sBool GiveUp;
 		csdcmn::sVersion ProtocolVersion;
 		str::wString
 			IP,
 			Token,
-			Head;
+			Head; // Head content cache on old behavior.
+    str::dString *HeadContent;  // New behavior.
 		void reset( bso::sBool P = true )
 		{
 			if ( P ) {
@@ -233,16 +238,15 @@ namespace faaspool {
 
 			Mutex_ = mtx::Undefined;
 			PendingDismiss_ = false;
-			Blocker_.reset(P);
+			tol::reset( P, NoMoreClientBlocker_);
 			TRow = qNIL;
 			Row = qNIL;
 			Driver = NULL;
-			Shareds.reset( P );
 			Access = mtx::Undefined;
-			Switch.reset( P );
 			ProtocolVersion = csdcmn::UnknownVersion;
-			tol::reset(P, IP, Token, Head);
+			tol::reset(P, Shareds, Switch, HeadAccess, IP, Token, Head);
 			GiveUp = false;	// If at 'true', the client is deemed to be disconnected.
+			HeadContent = NULL;
 		}
 		qCDTOR( rBackend_ );
 		void Init(
@@ -256,15 +260,20 @@ namespace faaspool {
 		{
 			reset();
 
+			if ( ( ProtocolVersion > 1 ) && Head.Amount() ) // With protocol > 1, 'Head' is no more cached,
+                                                      // but retrieved on each new browser connection.
+        qRGnr();
+
 			Mutex_ = mtx::Create();
 			PendingDismiss_ = false;
-			Blocker_.Init();
+			tol::Init(NoMoreClientBlocker_);
 			this->Row = Row;
 			this->TRow = TRow;
 			this->Driver = &Driver;
 			Shareds.Init();
 			Access = mtx::Create();
 			Switch.Init();
+			HeadAccess.Init();
 			this->ProtocolVersion = ProtocolVersion;
 			this->IP.Init( IP );
 			this->Token.Init(Token);
@@ -306,7 +315,7 @@ namespace faaspool {
 
 			if (PendingDismiss_)
 				if ( Shareds.Amount() == 0)
-					Blocker_.Unblock();
+					NoMoreClientBlocker_.Unblock();
 		qRR
 		qRT
 		qRE
@@ -322,7 +331,7 @@ namespace faaspool {
 			if ( Shareds.Amount() ) {
 				PendingDismiss_ = true;
 				Mutex.Unlock();
-				Blocker_.Wait();
+				NoMoreClientBlocker_.Wait();
 				Mutex.Lock();	// Otherwise 'Mutex_' could be destroyed before above 'Release' unlocks it.
 			}
 		qRR
@@ -448,7 +457,7 @@ namespace faaspool {
 		return Backend;
 	}
 
-	bso::sBool TUGetHead_(
+	bso::sBool TUGetCachedHead_(  // Old behavior.
 		const str::dString &Token,
 		str::dString &Head )
 	{
@@ -461,7 +470,8 @@ namespace faaspool {
 			return false;
 	}
 
-	bso::sBool TSGetHead_(
+	// Don't forget to lock the returned backend using 'Access' member!
+	bso::sBool TSGetCachedHead_(
 		const str::dString &Token,
 		str::dString &Head )
 	{
@@ -471,7 +481,7 @@ namespace faaspool {
 	qRB;
 		Mutex.InitAndLock( Mutex_ );
 
-		Found = TUGetHead_( Token, Head );
+		Found = TUGetCachedHead_( Token, Head );
 	qRR;
 	qRT;
 	qRE;
@@ -655,13 +665,13 @@ namespace {
     fdr::rRWDriver &Driver,
     str::dString &Flavour )
 	{
-	  csdcmn::sVersion Version = csdcmn::UnknownVersion;
+	  csdcmn::sVersion ProtocolVersion = csdcmn::UnknownVersion;
 	qRH;
 		flw::rDressedRWFlow<> Flow;
 	qRB;
 		Flow.Init( Driver );
 
-		switch ( Version = csdcmn::GetProtocolVersion( ProtocolId_, LastVersion_, Flow ) ) {
+		switch ( ProtocolVersion = csdcmn::GetProtocolVersion(protocol_::Id, protocol_::LastVersion, Flow) ) {
 		case csdcmn::UnknownVersion:
 			Put_( "\nUnknown FaaS protocol version!\n", Flow );
 			Flow.Commit();
@@ -673,7 +683,7 @@ namespace {
 			qRGnr();
 			break;
 		default:
-		  if ( Version > LastVersion_ )
+		  if ( ProtocolVersion > protocol_::LastVersion )
         qRUnx();
       Get_(Flow, Flavour);
 			Put_( "", Flow );
@@ -685,7 +695,7 @@ namespace {
 	qRR;
 	qRT;
 	qRE;
-    return Version;
+    return ProtocolVersion;
 	}
 
 	const str::dString &BuildURL_(
@@ -744,7 +754,7 @@ namespace {
 		rBackend_ *Backend = NULL;
 	qRH;
 		flw::rDressedRWFlow<> Flow;
-		str::wString Token, Head, Address, Misc, ErrorMessageLabel, ErrorMessage, URL;
+		str::wString Token, Head, Address, Misc, ErrorMessageLabel, ErrorMessage, URL, Log;
 		plugins::eStatus Status = plugins::s_Undefined;
 	qRB;
 		Flow.Init( Driver );
@@ -755,7 +765,8 @@ namespace {
 		switch ( Status = token_::GetPlugin().Handle(Token) ) {
 		case plugins::sOK:
 			tol::Init(Head, Address, Misc);
-			Get_(Flow, Head);
+			if ( ProtocolVersion < 1 )
+        Get_(Flow, Head);
 			Get_(Flow, Address);    // Address to which the toolkit has connected.
 			Get_(Flow, Misc);
 
@@ -781,7 +792,12 @@ namespace {
 		else {
 			URL.Init();
 			Put_(BuildURL_(Address, str::Empty, Token, URL), Flow);
-			Log_(IP, Token, Flavour );
+
+			bso::pInteger Buffer;
+			Log.Init(Flavour);
+			Log.Append(" / v");
+			Log.Append(bso::Convert(ProtocolVersion, Buffer));
+			Log_(IP, Token, Log );
 		}
 	qRR;
 		if ( Backend != NULL )
@@ -860,7 +876,9 @@ namespace {
 		fdr::rRWDriver &Driver,
 		sRow TRow,
 		const dShareds_ &Shareds,
-		tht::rBlocker &Blocker )
+		tht::rBlocker &Blocker,
+		tht::rBlocker &HeadBlocker,
+		str::dString *&HeadContent )
 	{
 	qRH;
 		flw::rDressedRWFlow<> Flow;
@@ -900,6 +918,14 @@ namespace {
 			case downstream::BroadcastActionId:
 				BroadcastAction_(Flow, TRow);
 				break;
+      case downstream::HeadSendingId:
+        if ( HeadContent == NULL )
+          qRGnr();
+        if ( HeadContent->Amount() )
+          qRGnr();
+        prtcl::Get(Flow, *HeadContent);
+        HeadBlocker.Unblock();
+        break;
 			default:
 				if ( !Shareds.Exists( Id ) ) {
             Release_(Flow, Id);
@@ -950,7 +976,7 @@ namespace {
 		ProtocolVersion = Handshake_(Driver, Flavour);
 
 		if ( ( Backend = CreateBackend_(Driver, ProtocolVersion, IP, Flavour) ) != NULL ) {
-			HandleSwitching_(IP, Backend->Token, Driver, Backend->TRow, Backend->Shareds, Backend->Switch );	// Does not return until disconnection or error.
+			HandleSwitching_(IP, Backend->Token, Driver, Backend->TRow, Backend->Shareds, Backend->Switch, Backend->HeadAccess, Backend->HeadContent );	// Does not return until disconnection or error.
 		}
 	qRR;
 		sclm::ErrorDefaultHandling();	// Also resets the error, otherwise the `WaitUntilNoMoreClient()` will lead to a deadlock on next error.
@@ -1078,6 +1104,47 @@ qRE;
 	return Row;	// 'qNIL' report an error, as in 'FaaS' mode, the token can not be empty.
 }
 
+namespace {
+  bso::sBool RetrieveHeadRemotely_(
+    const str::dString &Token,
+    str::dString &Head,
+    csdcmn::sVersion &ProtocolVersion)
+  {
+    bso::sBool Success = false;
+  qRH;
+    mtx::rHandle Mutex;
+    flw::rDressedWFlow<> Flow;
+    rBackend_ *Backend = NULL;
+  qRB;
+    Backend = TSGetBackend_( Token );
+
+    if ( Backend != NULL ) {
+      Mutex.InitAndLock(Backend->Access);
+
+      if ( Backend->HeadContent != NULL )
+        qRGnr();
+
+      ProtocolVersion = Backend->ProtocolVersion;
+
+      if ( ProtocolVersion >= 1 ) {
+        Backend->HeadContent = &Head;
+        Flow.Init(*Backend->Driver);
+        PutId(upstream::HeadRetrievingId, Flow);	// To signal to the back-end a new connection.
+        Flow.Commit();
+        Backend->HeadAccess.Wait();
+        Backend->HeadContent = NULL;
+        Backend->HeadAccess.Init();
+
+        Success = true;
+      }
+    }
+  qRR;
+  qRT;
+  qRE;
+    return Success;
+  }
+}
+
 void faaspool::rRWDriver::Release_(void)
 {
 qRH
@@ -1101,7 +1168,15 @@ bso::sBool faaspool::GetHead(
     const str::dString &Token,
     str::dString &Head )
 {
-    return TSGetHead_(Token,Head);	// 'UP' contains the token.
+  csdcmn::sVersion ProtocolVersion = csdcmn::UnknownVersion;
+
+  if ( !RetrieveHeadRemotely_(Token, Head, ProtocolVersion) )
+    if ( ProtocolVersion < 1 )  // Falling back to old behavior
+      return TSGetCachedHead_(Token,Head);
+    else
+      return false;
+  else
+    return true;
 }
 
 qGCTOR(faaspool)

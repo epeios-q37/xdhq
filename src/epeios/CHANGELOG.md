@@ -9,7 +9,26 @@
 - [rvrt]: reverting modifications;
 - [stdz]: modification to comply with current standards;
 - [trvl]: trivial modifications;
+- [typo]: typography;
 - [warn]: fixing compiler warning messages;
+
+## 2022-05-17
+- XDHCMN: [cont],
+
+## 2022-05-16
+- XDHCMN: [cont],
+
+## 2022-05-14
+- XDHCMN: [typo],
+- XDHUPS:
+  - improving error management,
+  - changing marker for raw tag values in scripts to fit with modifications in *TAGSBS*.
+
+## 2022-05-12
+- XDHCMN: introducing new HTML's head section handling,
+
+## 2022-05-11
+- XDHUPS: [adpt],
 
 ## 2022-04-24
 - CDGB64: [stdz],
@@ -64,7 +83,7 @@
 
 ## 2022-02-18
 - THT: renaming blocker preset items,
-- TOL: introducing `qNEW(…]) and `qDELETE(…)`,
+- TOL: introducing `qNEW(…])` and `qDELETE(…)`,
 
 ## 2022-02-16
 - FLX: fixing first reading not blocked when no writing occured wirg *relay* object,
@@ -4233,6 +4252,7 @@
 [rvrt]:#Reverting
 [stdz]:#Standardization
 [trvl]:#Trivial
+[typo]:#Typography
 [warn]:#Warning
 
 ### Adaptation (adpt)
@@ -4262,6 +4282,10 @@ Modification to comply with current standards.
 ### Trivial (trvl)
 
 Trivial modifications.
+
+### Typography
+
+Typographical error.
 
 ### Warning (warn)
 

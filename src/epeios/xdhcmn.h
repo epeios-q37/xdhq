@@ -49,11 +49,13 @@ namespace xdhcmn {
 		namespace upstream {
 			qCDEF( sId, CreationId, -2 );
 			qCDEF( sId, ClosingId, -3 );
+			qCDEF( sId, HeadRetrievingId, -4 ); // Since FaaS protocol v1.
 		}
 
 		namespace downstream {
 			qCDEF( sId, BroadcastScriptId, -2 );  // Probably obsolete!
 			qCDEF( sId, BroadcastActionId, -3 );  // Even if above removed, DON'T CHANGE VALUE!!!
+			qCDEF( sId, HeadSendingId, -4 ); // Since FaaS protocol v1.
 		}
 	}
 
