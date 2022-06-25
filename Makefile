@@ -39,8 +39,8 @@ mods += stsfsm tagsbs tht thtsub tol
 mods += txf tys uys utf xml 
 mods += xpp xtf llio dlbrry plgn 
 mods += plgncore btr cdgurl cnvfdr idxbtr 
-mods += idxque idxbtq logq ltf sck 
-mods += strmrg 
+mods += idxque idxbtq logq ltf rnd 
+mods += sck strmrg 
 mods += csdrcc csdbnc csdbns csdcmn csdmnc 
 mods += csdmxb csdmxc csdscb 
 mods += fblcmd fblcst fblfep fblfph fblfrd 
@@ -48,8 +48,9 @@ mods += fblfrp fblovl fbltyp
 mods += scla scli sclm scle scll 
 mods += sclr sclf 
 mods += xdhcdc xdhcmn xdhcuc xdhdws 
+mods += faas faasbckd faasbkds faasgate faaspool 
 mods += plugins prtcl 
-mods += common faaspool registry slfhlead session 
+mods += common registry slfhlead session 
 
 pmods += pllio 
 
@@ -78,6 +79,7 @@ AMD64=x64
 Cygwin=Cygwin
 MinGW=Msys
 GNULinux=GNU/Linux
+FreeBSD=FreeBSD
 Linux=Linux
 MacOS=Darwin
 Android=Android
@@ -131,6 +133,18 @@ ifeq ("$(os)","$(GNULinux)")
 endif
 
 #############################
+	
+
+###########################
+# For FreeBSD environment #
+###########################
+
+ifeq ("$(os)","$(FreeBSD)")
+# By default, 'CXX' is set to 'clang++'.
+# 	CXX = g++
+endif
+
+###########################
 	
 
 #########################
@@ -308,6 +322,37 @@ endif
 #############################
 		
 
+###########################
+# For FreeBSD environment #
+###########################
+
+ifeq ("$(os)","$(FreeBSD)")
+ 
+	co += -std=gnu++11 -DUNICODE -D_FILE_OFFSET_BITS=64
+	
+	mods += $(pmods)
+	
+	libs += -lpthread -ldl -lrt
+
+	ifeq ("$(target)","$(IA_32)")
+		co += -m32
+		lo += -m32
+	else # 'ifeq' on other line due to GNU 3.80 (Maemo on N900).
+		ifeq ("$(target)","$(AMD64)")
+			co += -m64
+			lo += -m64
+		endif
+	endif
+	binary=lib$(name).so
+	lo += -shared
+	co += -fPIC
+
+	dest=/home/csimon/bin/
+endif
+
+###########################
+		
+
 #########################
 # For Linux environment #
 #########################
@@ -399,7 +444,7 @@ ifeq ("$(target)","$(Android)")
 	rm -rf *.d
 endif
 
-copt += -DVERSION=\""20220518"\"
+copt += -DVERSION=\""20220625"\"
 copt += -DCOPYRIGHT_YEARS=\""2017"\"
 copt += -DIDENTIFIER=\""5f3ad6c6-4f0d-428d-9c00-678e1ed3967f"\"
 

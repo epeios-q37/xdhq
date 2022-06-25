@@ -1,13 +1,28 @@
 # *XDHq* *CHANGELOG*
 
+## 2022-06-24
+- fixing bug introduced with *FaaS* protocol v1,
+
+## 2022-06-03
+- adaptation to *FreeBSD*;
+
 ## 2022-05-18
 - adaptation to changes in underlying modules,
 - introducing new *FaaS* protocol (v1): the user content of the *HTML* *head* section is retrieved from the backend as needed and no more cached,
+
+## 2022-04-24
+- *xdhqxdh*: using shorter random generated tokens,
 
 ## 2022-01-01
 
 - the primitives handling is moved upstream (*xdwhebq*),
 - adaptation to *FaaSq*,
+
+## 2021-12-10
+- *xdhqxdh*:
+  - fixing bug callback deleted while being used,
+  - new protocols (both main and *FaaS*), the main protocol being handchecked once and not on each new session,
+  - adding scripts version to handle compatibility,
 
 ## 2020-10-01
 

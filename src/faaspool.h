@@ -28,147 +28,36 @@
 #ifndef FAASPOOL_INC_
 # define FAASPOOL_INC_
 
+# include "faasbkds.h"
+
 # include "common.h"
 
 # include "sck.h"
 
 namespace faaspool {
-	using namespace common::faas;
-
 	void Initialize();
 
 	template <typename fd>  inline void PutId(
-		sId Id,
+		faas::sId Id,
 		fd &FD )
 	{
 		dtfptb::VPut( Id, FD );
 	}
 
-	template <typename fd> inline sId GetId(
+	template <typename fd> inline faas::sId GetId(
 		fd &FD,
 		bso::sBool *IsError )
 	{
-		sId Id = UndefinedId;
+		faas::sId Id = faas::UndefinedId;
 
 		return dtfptb::VGet( FD, Id, IsError );
 	}
 
-	// Shared between upstream and downstream.
-	struct rShared
-	{
-	private:
-			mtx::rMutex Mutex_;	// To protect below 2 members.
-			bso::sBool Quit_;	// Set by the switcher to force closing.
-			bso::sBool Pending_;	// Set by the session when blocked for reading.
-			tht::rBlocker Read_;
-	public:
-		sId Id;
-		fdr::rRWDriver *Driver;
-		tht::rBlocker *Switch;
-		void reset( bso::sBool P = true )
-		{
-			if ( P ) {
-				if (Mutex_ != mtx::Undefined)
-					mtx::Delete(Mutex_);
-
-				if ( Switch != NULL ) {	// At 'NULL' when destruction occurs after backend becomes unavailable.
-					if ( !Read_.IsBlocked() ) {
-							if ( Switch->IsBlocked() )
-								Switch->Unblock();
-							else
-								qRGnr();
-					}
-				}
-			}
-
-			Mutex_ = mtx::Undefined;
-			Quit_ = false;
-			Pending_ = false;
-			Read_.reset( P );
-			Id = UndefinedId;
-			Driver = NULL;
-			Switch = NULL;
-		}
-		void Init( void )
-		{
-			reset();
-
-			Mutex_ = mtx::Create();
-
-			Read_.Init();
-		}
-		qCDTOR( rShared );
-		bso::sBool WaitForRead(void)
-		{
-			bso::sBool Return = true;
-		qRH
-			mtx::rHandle Mutex;
-		qRB
-			Mutex.InitAndLock(Mutex_);
-
-			if ( Quit_) {
-				Return = false;
-			} else {
-				Pending_ = true;
-				Mutex.Unlock();
-				Read_.Wait();
-				Mutex.Lock();
-				Return = !Quit_;
-			}
-		qRR
-		qRT
-		qRE
-			return Return;
-		}
-		void UnblockReading(void)
-		{
-		qRH
-			mtx::rHandle Mutex;
-		qRB
-			Mutex.InitAndLock(Mutex_);
-
-			if ( Quit_ )
-				qRGnr();
-
-			Pending_ = false;
-
-			Read_.Unblock();
-		qRR
-		qRT
-		qRE
-		}
-		void UnblockAndQuit(void)
-		{
-		qRH
-			mtx::rHandle Mutex;
-		qRB
-			Mutex.InitAndLock(Mutex_);
-
-			if ( Quit_ )
-				qRGnr();
-
-			Quit_ = true;
-			Switch = NULL;
-
-			if ( Pending_ )
-				Read_.Unblock();
-		qRR
-		qRT
-		qRE
-		}
-		bso::sBool IsValid( void ) const
-		{
-			return Id != UndefinedId;
-		}
-	};
-
-	class rBackend_;
-
-	sRow GetConnection_(
+	faas::sRow NewSession_(
 		const str::dString &Token,
 		str::dString &IP,
-		rShared &Shared,
-		rBackend_ *&Backend);
+		faasgate::rGate &Gate,
+		faasbckd::rBackend *&Backend);
 
 	class cGuard
 	{
@@ -185,23 +74,23 @@ namespace faaspool {
 	: public fdr::rRWDressedDriver
 	{
 	private:
-		qRMV(rBackend_, B_, Backend_);
+		qRMV(faasbckd::rBackend, B_, Backend_);
 		bso::sSize Consumed_;
 		bso::sBool IdSent_;
-		rShared Shared_;
+		faasgate::rGate Gate_;
 		bso::sBool IsValid_(void)
 		{
-			return (Backend_ != NULL) && Shared_.IsValid();
+			return (Backend_ != NULL) && Gate_.IsValid();
 		}
 		fdr::rRWDriver &D_(void)
 		{
-			// NOTA: The underlying drive is valid as long as the backend exists,
+			// NOTA: The underlying driver is valid as long as the backend exists,
 			// hence it does not really matter if the driver becomes invalid after
-			// Calling this function.
+			// calling this function.
 			if ( !IsValid_())
 				qRGnr();
 
-			return *Shared_.Driver;
+			return Gate_.Driver();
 		}
 		// A reading leaves the data in the underlying driver,
 		// otherwise we could read data which are not for us,
@@ -230,7 +119,7 @@ namespace faaspool {
 			fdr::byte__ *Buffer ) override
 		{
 			if ( !Consume_( fdr::rRWDressedDriver::AmountRed() ) ) {
-				if ( !Shared_.WaitForRead() )	// The underlying backend does no more exist.
+				if ( !Gate_.WaitForRead() )	// The underlying backend does no more exist.
 					return 0;	// EOF.
 
 				D_().RTake();
@@ -249,7 +138,7 @@ namespace faaspool {
 			Consumed_ = 0;
 
 			if ( D_().Dismiss( Unlock, ErrHandling ) ) {
-				Shared_.Switch->Unblock();
+				Gate_.Switch().Unblock();
 
 				return true;
 			} else
@@ -264,7 +153,7 @@ namespace faaspool {
 			fdr::size__ Maximum ) override
 		{
 			if ( !IdSent_ ) {
-				PutId(Shared_.Id, D_());
+				PutId(Gate_.Id(), D_());
 
 				IdSent_ = true;
 			}
@@ -297,11 +186,11 @@ namespace faaspool {
 			fdr::rRWDressedDriver::reset( P );
 			Backend_ = NULL;
 			Consumed_ = 0;
-			Shared_.reset(P);
+			Gate_.reset(P);
 			IdSent_ = false;
 		}
 		qCVDTOR( rRWDriver );
-		sRow Init(
+		faas::sRow Init(
 			const str::dString &Token,
 			str::dString &IP,
 			fdr::eThreadSafety ThreadSafety = fdr::ts_Default )
@@ -310,15 +199,15 @@ namespace faaspool {
 
 			Consumed_ = 0;
 
-			Shared_.Init();
+			Gate_.Init();
 
 			IdSent_ = false;
 
-			return GetConnection_(Token, IP, Shared_, Backend_);
+			return NewSession_(Token, IP, Gate_, Backend_);
 		}
-		rShared &GetShared( void )
+		faasgate::rGate &GetGate( void )
 		{
-			return Shared_;
+			return Gate_;
 		}
 	};
 
