@@ -12,7 +12,7 @@
   </Parameters>
   <Definitions>
    <FaaS>
-    <URL>http://%Address%%Service%/xdh.php?_token=%Token%</URL>
+    <URL>https://%Address%%Service%/xdh.php?_token=%Token%</URL>
     <Notifications>
      <DefaultNotification><![CDATA[
 ****************************************************************************
@@ -32,7 +32,7 @@
    </FaaS>
    <Plugins target="Token">
     <Plugin id="Forbidden">
-     <Filename>/home/csimon/bin/plugins/xdhq/proxy/token/Forbidden/forbidden</Filename>
+     <Filename>Forbidden/forbidden</Filename>
      <Configuration>
       <Parameters>
        <Command>Default</Command>
