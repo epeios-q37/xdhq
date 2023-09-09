@@ -33,13 +33,13 @@ mods += fil flf flsq flw flx
 mods += fnm ias idsq iof iop 
 mods += lcl lck lst lstbch lstcrt 
 mods += lstctn mns mtk mtx ntvstr 
-mods += osd que rgstry sdr stkbse 
-mods += stkbch stkcrt stkctn str strng 
-mods += stsfsm tagsbs tht thtsub tol 
-mods += txf tys uys utf xml 
-mods += xpp xtf llio dlbrry plgn 
-mods += plgncore btr cdgurl cnvfdr idxbtr 
-mods += idxque idxbtq logq ltf rnd 
+mods += osd que rgstry rnd sdr 
+mods += stkbse stkbch stkcrt stkctn str 
+mods += strng stsfsm tagsbs tht thtsub 
+mods += tol txf tys uys utf 
+mods += xml xpp xtf llio dlbrry 
+mods += plgn plgncore btr cdgurl cnvfdr 
+mods += idxbtr idxque idxbtq logq ltf 
 mods += sck strmrg 
 mods += csdrcc csdbnc csdbns csdcmn csdmnc 
 mods += csdmxb csdmxc csdscb 
@@ -47,7 +47,7 @@ mods += fblcmd fblcst fblfep fblfph fblfrd
 mods += fblfrp fblovl fbltyp 
 mods += scla scli sclm scle scll 
 mods += sclr sclf 
-mods += xdhcdc xdhcmn xdhcuc xdhdws 
+mods += xdhcdc xdhcmn xdhcuc xdhdws xdhutl 
 mods += faas faasbckd faasbkds faasdpot faasgate 
 mods += faaspool 
 mods += plugins prtcl 
@@ -422,8 +422,8 @@ ifeq ("$(os)","$(Android)")
 	mods += $(pmods)
 
 	libs += -lpthread -ldl -lrt
-	
-	ifeq ("$(target)","$(IA_32)")
+
+    ifeq ("$(target)","$(IA_32)")
 		co += -m32
 		lo += -m32
 	else # 'ifeq' on other line due to GNU 3.80 (Maemo on N900).
@@ -445,7 +445,7 @@ ifeq ("$(target)","$(Android)")
 	rm -rf *.d
 endif
 
-copt += -DVERSION=\""20220930"\"
+copt += -DVERSION=\""20230704"\"
 copt += -DCOPYRIGHT_YEARS=\""2017"\"
 copt += -DIDENTIFIER=\""5f3ad6c6-4f0d-428d-9c00-678e1ed3967f"\"
 

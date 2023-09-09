@@ -53,13 +53,13 @@ namespace plugins {
 			str::dString &Normalized ) = 0;
 	public:
 		qCALLBACK( Token )
-		eStatus Handle(
+		eStatus _Handle(
 			const str::dString &Raw,
 			str::dString &Normalized )
 		{
 			return PLUGINSHandle( Raw, Normalized );
 		}
-		eStatus Handle( str::dString &Token )
+		eStatus _Handle( str::dString &Token )
 		{
 			eStatus Status = s_Undefined;
 		qRH;
@@ -67,7 +67,7 @@ namespace plugins {
 		qRB;
 			Normalized.Init();
 
-			Status = Handle( Token, Normalized );
+			Status = _Handle( Token, Normalized );
 
 			Token = Normalized;
 		qRR;

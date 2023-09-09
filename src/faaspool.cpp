@@ -451,7 +451,7 @@ namespace {
 		Token.Init();
 		Get_( Flow, Token );
 
-		switch ( Status = token_::GetPlugin().Handle(Token) ) {
+		switch ( Status = token_::GetPlugin()._Handle(Token) ) {
 		case plugins::sOK:
 			tol::Init(Head, Address, Misc);
 			if ( ProtocolVersion < 1 )
